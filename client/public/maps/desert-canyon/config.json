@@ -1,0 +1,36 @@
+{
+  "id": "desert-canyon",
+  "name": "Shader Ball Arena",
+  "skyConfig": {
+    "sunPosition": [
+      120,
+      80,
+      60
+    ]
+  },
+  "lighting": {
+    "ambient": 1.5,
+    "neonLights": [
+      {
+        "position": [
+          0,
+          8,
+          0
+        ],
+        "color": "#ffffff",
+        "intensity": 40
+      }
+    ]
+  },
+  "spawnPoint": [
+    0,
+    1,
+    5
+  ],
+  "modelScale": 0.5,
+  "modelPosition": [
+    0,
+    0,
+    0
+  ]
+}

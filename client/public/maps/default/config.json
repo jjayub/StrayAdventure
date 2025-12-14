@@ -1,0 +1,39 @@
+{
+  "id": "default",
+  "name": "Neon City",
+  "skyConfig": {
+    "sunPosition": [
+      100,
+      20,
+      100
+    ]
+  },
+  "lighting": {
+    "ambient": 1.2,
+    "neonLights": [
+      {
+        "position": [
+          -3,
+          3,
+          3
+        ],
+        "color": "#ff0080",
+        "intensity": 30
+      },
+      {
+        "position": [
+          3,
+          3,
+          -3
+        ],
+        "color": "#00ffff",
+        "intensity": 30
+      }
+    ]
+  },
+  "spawnPoint": [
+    0,
+    1,
+    0
+  ]
+}

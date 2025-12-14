@@ -1,0 +1,45 @@
+{
+  "id": "medieval-town",
+  "name": "Littlest Tokyo",
+  "skyConfig": {
+    "sunPosition": [
+      50,
+      30,
+      80
+    ]
+  },
+  "lighting": {
+    "ambient": 1.2,
+    "neonLights": [
+      {
+        "position": [
+          -5,
+          8,
+          5
+        ],
+        "color": "#ff6600",
+        "intensity": 40
+      },
+      {
+        "position": [
+          5,
+          8,
+          -5
+        ],
+        "color": "#ffcc00",
+        "intensity": 40
+      }
+    ]
+  },
+  "spawnPoint": [
+    0,
+    2,
+    15
+  ],
+  "modelScale": 0.02,
+  "modelPosition": [
+    0,
+    0,
+    0
+  ]
+}

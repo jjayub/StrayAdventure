@@ -1,0 +1,36 @@
+{
+  "id": "forest-environment",
+  "name": "Cozy Bath Day",
+  "skyConfig": {
+    "sunPosition": [
+      80,
+      40,
+      100
+    ]
+  },
+  "lighting": {
+    "ambient": 1.8,
+    "neonLights": [
+      {
+        "position": [
+          0,
+          5,
+          0
+        ],
+        "color": "#ffaa00",
+        "intensity": 25
+      }
+    ]
+  },
+  "spawnPoint": [
+    0,
+    1,
+    5
+  ],
+  "modelScale": 2,
+  "modelPosition": [
+    0,
+    0,
+    0
+  ]
+}

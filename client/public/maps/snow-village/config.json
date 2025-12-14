@@ -1,0 +1,54 @@
+{
+  "id": "snow-village",
+  "name": "Ion Drive Station",
+  "skyConfig": {
+    "sunPosition": [
+      100,
+      60,
+      100
+    ]
+  },
+  "lighting": {
+    "ambient": 0.8,
+    "neonLights": [
+      {
+        "position": [
+          0,
+          5,
+          0
+        ],
+        "color": "#00ffff",
+        "intensity": 50
+      },
+      {
+        "position": [
+          -3,
+          3,
+          3
+        ],
+        "color": "#ff00ff",
+        "intensity": 30
+      },
+      {
+        "position": [
+          3,
+          3,
+          -3
+        ],
+        "color": "#00ff00",
+        "intensity": 30
+      }
+    ]
+  },
+  "spawnPoint": [
+    0,
+    2,
+    8
+  ],
+  "modelScale": 1,
+  "modelPosition": [
+    0,
+    0,
+    0
+  ]
+}

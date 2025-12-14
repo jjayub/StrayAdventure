@@ -1,0 +1,46 @@
+{
+  "maps": [
+    {
+      "id": "default",
+      "name": "Neon City",
+      "description": "เมือง Cyberpunk พื้นฐาน มีแสง Neon สวยงาม",
+      "preview": "/maps/default/preview.jpg",
+      "scene": "/maps/default/config.json"
+    },
+    {
+      "id": "floating-islands",
+      "name": "Floating Islands",
+      "description": "เกาะลอยฟ้า - Platformer Level สำหรับกระโดดข้ามแพลตฟอร์ม",
+      "preview": "/maps/floating-islands/preview.jpg",
+      "scene": "/maps/floating-islands/config.json"
+    },
+    {
+      "id": "forest-environment",
+      "name": "Cozy Bath Day",
+      "description": "ฉากน่ารักๆ สไตล์ Cozy - บรรยากาศอบอุ่น",
+      "preview": "/maps/forest-environment/preview.jpg",
+      "scene": "/maps/forest-environment/config.json"
+    },
+    {
+      "id": "medieval-town",
+      "name": "Littlest Tokyo",
+      "description": "เมือง Tokyo จิ๋ว - มีตึก รถไฟ และ Animation",
+      "preview": "/maps/medieval-town/preview.jpg",
+      "scene": "/maps/medieval-town/config.json"
+    },
+    {
+      "id": "snow-village",
+      "name": "Ion Drive Station",
+      "description": "สถานีอวกาศ Sci-Fi - เครื่องยนต์ Ion Drive",
+      "preview": "/maps/snow-village/preview.jpg",
+      "scene": "/maps/snow-village/config.json"
+    },
+    {
+      "id": "desert-canyon",
+      "name": "Shader Ball Arena",
+      "description": "เวที Shader Ball - สำหรับทดสอบ Materials",
+      "preview": "/maps/desert-canyon/preview.jpg",
+      "scene": "/maps/desert-canyon/config.json"
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import { Sky, Cloud, useGLTF, useProgress, Html } from '@react-three/drei'
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier'
 import { useThree } from '@react-three/fiber'
 import { Player } from './Player'
+import { OtherPlayers } from './OtherPlayers'
 import { Effects } from './Effects'
 import { useGame } from './stores/useGame'
 import { Suspense, useEffect, useState } from 'react'
@@ -272,6 +273,9 @@ export function Experience() {
 
         {/* Player - รับ spawnPoint จาก Map Config */}
         <Player spawnPoint={mapConfig?.spawnPoint || [0, 1, 0]} />
+
+        {/* Other Players - แสดงผู้เล่นคนอื่นในโลก Multiplayer */}
+        <OtherPlayers />
 
         {/* Map 3D Model - แสดง Loading Screen ขณะโหลด */}
         {hasMapModel && selectedMap && (

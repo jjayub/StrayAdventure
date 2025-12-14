@@ -8,7 +8,7 @@ import { playHoverSound, playClickSound } from './hooks/useUISound'
  * สไตล์ Stray - Minimalist Dark Theme with Spotlight
  */
 export function MainMenu() {
-  const { goToMapSelection, toggleControls, showControls } = useGame()
+  const { goToNicknameInput, toggleControls, showControls } = useGame()
   const [hoveredButton, setHoveredButton] = useState<string | null>('start')
 
   /**
@@ -99,7 +99,7 @@ export function MainMenu() {
             label="START GAME"
             isHovered={hoveredButton === 'start'}
             onHover={() => handleHover('start')}
-            onClick={() => handleClick(goToMapSelection)}
+            onClick={() => handleClick(goToNicknameInput)}
           />
           <StrayMenuButton
             label="SETTINGS"

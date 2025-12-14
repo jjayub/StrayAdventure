@@ -29,7 +29,7 @@ export interface CharacterSettings {
  * Interface สำหรับ State ของเกม
  */
 interface GameState {
-  gameState: 'menu' | 'mapSelection' | 'playing' | 'paused'
+  gameState: 'menu' | 'nicknameInput' | 'mapSelection' | 'playing' | 'paused'
   selectedMap: MapInfo | null
   availableMaps: MapInfo[]
   showControls: boolean
@@ -37,7 +37,10 @@ interface GameState {
   showSettings: boolean
   /** ค่าปรับแต่งตัวละคร */
   characterSettings: CharacterSettings
+  /** ชื่อผู้เล่น */
+  nickname: string
 
+  goToNicknameInput: () => void
   goToMapSelection: () => void
   selectMap: (map: MapInfo) => void
   startGame: () => void
@@ -50,6 +53,8 @@ interface GameState {
   toggleSettings: () => void
   /** อัพเดทค่า Character Settings */
   updateCharacterSettings: (settings: Partial<CharacterSettings>) => void
+  /** ตั้งชื่อผู้เล่น */
+  setNickname: (nickname: string) => void
 }
 
 /** ค่าเริ่มต้นของ Character Settings */
@@ -67,7 +72,9 @@ export const useGame = create<GameState>((set) => ({
   showControls: false,
   showSettings: false,
   characterSettings: { ...defaultCharacterSettings },
+  nickname: '',
 
+  goToNicknameInput: () => set({ gameState: 'nicknameInput' }),
   goToMapSelection: () => set({ gameState: 'mapSelection' }),
   selectMap: (map) => set({ selectedMap: map }),
   startGame: () => set({ gameState: 'playing' }),
@@ -80,4 +87,5 @@ export const useGame = create<GameState>((set) => ({
   updateCharacterSettings: (settings) => set((state) => ({
     characterSettings: { ...state.characterSettings, ...settings }
   })),
+  setNickname: (nickname) => set({ nickname }),
 }))

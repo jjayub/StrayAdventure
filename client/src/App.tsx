@@ -5,6 +5,7 @@ import { KeyboardControls } from '@react-three/drei'
 import { useSocket } from './stores/useSocket'
 import { useGame } from './stores/useGame'
 import { MainMenu } from './MainMenu'
+import { NicknameInput } from './NicknameInput'
 import { MapSelection } from './MapSelection'
 import { GameHUD } from './GameHUD'
 
@@ -144,6 +145,9 @@ export default function App() {
 
       {/* Main Menu */}
       {gameState === 'menu' && <MainMenu />}
+
+      {/* Nickname Input */}
+      {gameState === 'nicknameInput' && <NicknameInput />}
 
       {/* Map Selection */}
       {gameState === 'mapSelection' && <MapSelection />}

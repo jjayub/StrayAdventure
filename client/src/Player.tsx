@@ -61,6 +61,8 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
 
   // Socket connection
   const sendPosition = useSocket((state) => state.sendPosition)
+  const setSocketNickname = useSocket((state) => state.setNickname)
+  const nickname = useGame((state) => state.nickname)
 
   // Character settings from game store (ค่าปรับแต่งจาก Settings Panel)
   const characterSettings = useGame((state) => state.characterSettings)
@@ -71,6 +73,13 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
 
   // Animation State
   const [currentAction, setCurrentAction] = useState('Survey')
+
+  // ส่ง nickname ไปยัง server เมื่อเริ่มเกม
+  useEffect(() => {
+    if (nickname) {
+      setSocketNickname(nickname)
+    }
+  }, [nickname, setSocketNickname])
 
   // Setup mouse controls for camera zoom and orbit
   useEffect(() => {
@@ -460,7 +469,7 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     // 7. Send position to server (Throttled)
     const now = Date.now()
     if (now - lastSyncTime.current > 50) {
-      sendPosition(bodyPosition.x, bodyPosition.y, bodyPosition.z)
+      sendPosition(bodyPosition.x, bodyPosition.y, bodyPosition.z, characterRotation.current)
       lastSyncTime.current = now
     }
   })

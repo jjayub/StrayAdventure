@@ -59,9 +59,11 @@ interface MapInfo {
  */
 interface PlayerData {
   id: string;
+  nickname: string;
   x: number;
   y: number;
   z: number;
+  rotation: number;
   lastUpdate: number;
 }
 
@@ -246,36 +248,70 @@ app.get('/api/players', (req, res) => {
 io.on('connection', (socket) => {
   console.log('✅ Player connected:', socket.id);
 
+  // สร้างข้อมูลผู้เล่นใหม่
   players.set(socket.id, {
     id: socket.id,
+    nickname: 'Unknown',
     x: 0,
-    y: 0,
+    y: 1,
     z: 0,
+    rotation: 0,
     lastUpdate: Date.now()
   });
 
+  // ส่งรายชื่อผู้เล่นทั้งหมดให้ผู้เล่นใหม่
   socket.emit('players:list', Array.from(players.values()));
-  socket.broadcast.emit('player:joined', { id: socket.id });
+
+  // แจ้งผู้เล่นคนอื่นว่ามีผู้เล่นใหม่เข้ามา
+  const newPlayer = players.get(socket.id);
+  socket.broadcast.emit('player:joined', {
+    id: socket.id,
+    nickname: newPlayer?.nickname || 'Unknown'
+  });
+
+  // รับ nickname จากผู้เล่น
+  socket.on('player:nickname', (data: { nickname: string }) => {
+    const player = players.get(socket.id);
+    if (player) {
+      player.nickname = data.nickname || 'Unknown';
+      console.log(`📝 Player ${socket.id} set nickname: ${player.nickname}`);
+
+      // แจ้งผู้เล่นคนอื่นเกี่ยวกับ nickname ใหม่
+      socket.broadcast.emit('player:update', {
+        id: socket.id,
+        nickname: player.nickname,
+        x: player.x,
+        y: player.y,
+        z: player.z,
+        rotation: player.rotation
+      });
+    }
+  });
 
   socket.on('disconnect', () => {
-    console.log('❌ Player disconnected:', socket.id);
+    const player = players.get(socket.id);
+    console.log('❌ Player disconnected:', player?.nickname || socket.id);
     players.delete(socket.id);
     socket.broadcast.emit('player:left', { id: socket.id });
   });
 
-  socket.on('player:position', (data: { x: number; y: number; z: number }) => {
+  socket.on('player:position', (data: { x: number; y: number; z: number; rotation?: number }) => {
     const player = players.get(socket.id);
     if (player) {
       player.x = data.x;
       player.y = data.y;
       player.z = data.z;
+      player.rotation = data.rotation || 0;
       player.lastUpdate = Date.now();
 
+      // ส่งข้อมูลตำแหน่งพร้อม nickname ให้ผู้เล่นคนอื่น
       socket.broadcast.emit('player:update', {
         id: socket.id,
+        nickname: player.nickname,
         x: data.x,
         y: data.y,
-        z: data.z
+        z: data.z,
+        rotation: data.rotation || 0
       });
     }
   });

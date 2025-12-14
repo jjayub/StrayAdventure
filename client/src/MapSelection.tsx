@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useGame } from './stores/useGame'
 
 // Define MapInfo type locally
@@ -23,8 +23,9 @@ export function MapSelection() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMap, setShowAddMap] = useState(false)
 
-  // โหลดรายการ Maps จาก Server
-  const loadMaps = async () => {
+  // โหลดรายการ Maps จาก Server (ใช้ useCallback เพื่อ reuse)
+  const loadMaps = useCallback(async () => {
+    setIsLoading(true)
     try {
       const response = await fetch('http://localhost:3000/api/maps')
       if (response.ok) {
@@ -47,11 +48,12 @@ export function MapSelection() {
       }
     }
     setIsLoading(false)
-  }
+  }, [setAvailableMaps])
 
+  // โหลด Maps เมื่อ Component mount
   useEffect(() => {
     loadMaps()
-  }, [])
+  }, [loadMaps])
 
   const handleSelectMap = (map: MapInfo, index: number) => {
     setSelectedIndex(index)

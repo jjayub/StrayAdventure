@@ -1,5 +1,6 @@
 import { Sky, Cloud, useGLTF, useProgress, Html } from '@react-three/drei'
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier'
+import { useThree } from '@react-three/fiber'
 import { Player } from './Player'
 import { Effects } from './Effects'
 import { useGame } from './stores/useGame'
@@ -88,23 +89,54 @@ function LoadingScreen() {
 /**
  * Interface สำหรับ Map Config
  */
+/**
+ * Interface สำหรับ Map Config - กำหนดโครงสร้าง config ของแต่ละ Map
+ */
 interface MapConfig {
+  /** ID เฉพาะของ Map */
   id: string
+  /** ชื่อแสดงผลของ Map */
   name: string
+  /** การตั้งค่าท้องฟ้า */
   skyConfig?: {
+    /** ตำแหน่งดวงอาทิตย์ [x, y, z] */
     sunPosition: [number, number, number]
   }
+  /** การตั้งค่าแสง */
   lighting?: {
+    /** ความเข้มของ Ambient Light */
     ambient: number
+    /** ไฟนีออนเพิ่มเติม */
     neonLights?: Array<{
       position: [number, number, number]
       color: string
       intensity: number
     }>
   }
+  /** จุดเกิดตัวละคร [x, y, z] - ต้องอยู่บน Map Model */
   spawnPoint?: [number, number, number]
+  /** ขนาด Scale ของ Map Model (default: 1) */
   modelScale?: number
+  /** ตำแหน่ง Offset ของ Map Model [x, y, z] */
   modelPosition?: [number, number, number]
+  /** ซ่อน Default Floor หรือไม่ (default: false, จะซ่อนอัตโนมัติเมื่อมี map.glb) */
+  hideDefaultFloor?: boolean
+}
+
+/**
+ * CameraController Component - ปรับค่า Camera ตาม Settings
+ * @param renderDistance - ระยะ Render ที่ต้องการ
+ */
+function CameraController({ renderDistance }: { renderDistance: number }) {
+  const { camera } = useThree()
+
+  useEffect(() => {
+    // ปรับ camera far plane ตาม render distance
+    camera.far = renderDistance * 1.5
+    camera.updateProjectionMatrix()
+  }, [camera, renderDistance])
+
+  return null
 }
 
 /**
@@ -112,7 +144,7 @@ interface MapConfig {
  * ฉากหลักของเกม - โหลด Map ที่เลือกจาก Map Selection
  */
 export function Experience() {
-  const { selectedMap } = useGame()
+  const { selectedMap, characterSettings } = useGame()
   const [mapConfig, setMapConfig] = useState<MapConfig | null>(null)
   const [hasMapModel, setHasMapModel] = useState(false)
 
@@ -147,8 +179,17 @@ export function Experience() {
   const ambientIntensity = mapConfig?.lighting?.ambient || 1.2
   const neonLights = mapConfig?.lighting?.neonLights || []
 
+  // Render distance from settings (View Distance / Fog)
+  const renderDistance = characterSettings.renderDistance
+
   return (
     <>
+      {/* Fog - ควบคุม View Distance (ระยะการ Render) */}
+      <fog attach="fog" args={['#87ceeb', renderDistance * 0.3, renderDistance]} />
+
+      {/* Camera Far Plane - ปรับระยะ render ของกล้อง */}
+      <CameraController renderDistance={renderDistance} />
+
       {/* Sky Background */}
       <Sky
         distance={450000}
@@ -209,25 +250,28 @@ export function Experience() {
         </>
       )}
 
-      <Physics>
-        {/* Floor */}
-        <RigidBody type="fixed" friction={2}>
-          <mesh receiveShadow position-y={-1.25} rotation-x={-Math.PI * 0.5} scale={100}>
-            <planeGeometry />
-            <meshStandardMaterial color="#4a7c4e" roughness={0.9} metalness={0.0} />
-          </mesh>
-        </RigidBody>
+      {/* Physics with realistic gravity (9.81 m/s² * 2 for better game feel) */}
+      <Physics gravity={[0, -20, 0]}>
+        {/* Floor - แสดงเฉพาะเมื่อไม่มี Map Model (เพื่อป้องกันตัวละครตกลงไปใต้แมพ) */}
+        {!hasMapModel && (
+          <RigidBody type="fixed" friction={2}>
+            <mesh receiveShadow position-y={-1.25} rotation-x={-Math.PI * 0.5} scale={100}>
+              <planeGeometry />
+              <meshStandardMaterial color="#4a7c4e" roughness={0.9} metalness={0.0} />
+            </mesh>
+          </RigidBody>
+        )}
 
-        {/* Invisible Walls */}
+        {/* Invisible Walls - ป้องกันตัวละครหลุดออกจากแมพ (ขยายให้ใหญ่ขึ้นสำหรับแมพใหญ่) */}
         <RigidBody type="fixed">
-          <CuboidCollider args={[50, 10, 0.5]} position={[0, 5, 50]} />
-          <CuboidCollider args={[50, 10, 0.5]} position={[0, 5, -50]} />
-          <CuboidCollider args={[0.5, 10, 50]} position={[50, 5, 0]} />
-          <CuboidCollider args={[0.5, 10, 50]} position={[-50, 5, 0]} />
+          <CuboidCollider args={[500, 100, 0.5]} position={[0, 50, 500]} />
+          <CuboidCollider args={[500, 100, 0.5]} position={[0, 50, -500]} />
+          <CuboidCollider args={[0.5, 100, 500]} position={[500, 50, 0]} />
+          <CuboidCollider args={[0.5, 100, 500]} position={[-500, 50, 0]} />
         </RigidBody>
 
-        {/* Player */}
-        <Player />
+        {/* Player - รับ spawnPoint จาก Map Config */}
+        <Player spawnPoint={mapConfig?.spawnPoint || [0, 1, 0]} />
 
         {/* Map 3D Model - แสดง Loading Screen ขณะโหลด */}
         {hasMapModel && selectedMap && (
@@ -252,6 +296,9 @@ export function Experience() {
 
 /**
  * MapModel Component - โหลดและแสดง 3D Model ของ Map
+ * @param mapId - ID ของ Map สำหรับโหลด glb file
+ * @param scale - ขนาดของ Map Model
+ * @param position - ตำแหน่งของ Map Model
  */
 function MapModel({
   mapId,
@@ -276,7 +323,12 @@ function MapModel({
   })
 
   return (
-    <RigidBody type="fixed" colliders="trimesh">
+    <RigidBody
+      type="fixed"
+      colliders="trimesh"
+      friction={0.7}
+      restitution={0}
+    >
       <primitive
         object={clonedScene}
         scale={scale}

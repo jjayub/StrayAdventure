@@ -12,6 +12,20 @@ export interface MapInfo {
 }
 
 /**
+ * Interface สำหรับ Character Settings - ค่าปรับแต่งตัวละคร
+ */
+export interface CharacterSettings {
+  /** ความเร็วในการเคลื่อนที่ (1 = ปกติ, 10 = เร็วขึ้น 10 เท่า) */
+  moveSpeed: number
+  /** ความเร็วในการหมุนตัว */
+  rotationSpeed: number
+  /** ความแรงในการกระโดด */
+  jumpForce: number
+  /** ระยะการ Render (View Distance) - ยิ่งมากยิ่งเห็นไกล */
+  renderDistance: number
+}
+
+/**
  * Interface สำหรับ State ของเกม
  */
 interface GameState {
@@ -19,6 +33,10 @@ interface GameState {
   selectedMap: MapInfo | null
   availableMaps: MapInfo[]
   showControls: boolean
+  /** แสดง/ซ่อน Settings Panel */
+  showSettings: boolean
+  /** ค่าปรับแต่งตัวละคร */
+  characterSettings: CharacterSettings
 
   goToMapSelection: () => void
   selectMap: (map: MapInfo) => void
@@ -28,6 +46,18 @@ interface GameState {
   goToMenu: () => void
   toggleControls: () => void
   setAvailableMaps: (maps: MapInfo[]) => void
+  /** เปิด/ปิด Settings Panel */
+  toggleSettings: () => void
+  /** อัพเดทค่า Character Settings */
+  updateCharacterSettings: (settings: Partial<CharacterSettings>) => void
+}
+
+/** ค่าเริ่มต้นของ Character Settings */
+const defaultCharacterSettings: CharacterSettings = {
+  moveSpeed: 1,
+  rotationSpeed: 1,
+  jumpForce: 1,
+  renderDistance: 500,
 }
 
 export const useGame = create<GameState>((set) => ({
@@ -35,6 +65,8 @@ export const useGame = create<GameState>((set) => ({
   selectedMap: null,
   availableMaps: [],
   showControls: false,
+  showSettings: false,
+  characterSettings: { ...defaultCharacterSettings },
 
   goToMapSelection: () => set({ gameState: 'mapSelection' }),
   selectMap: (map) => set({ selectedMap: map }),
@@ -44,4 +76,8 @@ export const useGame = create<GameState>((set) => ({
   goToMenu: () => set({ gameState: 'menu', selectedMap: null }),
   toggleControls: () => set((state) => ({ showControls: !state.showControls })),
   setAvailableMaps: (maps) => set({ availableMaps: maps }),
+  toggleSettings: () => set((state) => ({ showSettings: !state.showSettings })),
+  updateCharacterSettings: (settings) => set((state) => ({
+    characterSettings: { ...state.characterSettings, ...settings }
+  })),
 }))

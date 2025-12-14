@@ -6,6 +6,8 @@ import { useGame } from './stores/useGame'
  * แสดง UI ขณะเล่นเกม ประกอบด้วย:
  * - สถานะการเชื่อมต่อ Server
  * - ปุ่ม Exit กลับไปหน้า Menu
+ * - ปุ่ม Settings เปิด/ปิด Settings Panel
+ * - Settings Panel สำหรับปรับค่าตัวละคร
  * - Confirmation Dialog ก่อนออก
  */
 interface GameHUDProps {
@@ -14,7 +16,7 @@ interface GameHUDProps {
 }
 
 export function GameHUD({ isConnected, latency }: GameHUDProps) {
-  const { goToMenu } = useGame()
+  const { goToMenu, showSettings, toggleSettings, characterSettings, updateCharacterSettings } = useGame()
   const [showExitConfirm, setShowExitConfirm] = useState(false)
 
   const handleExit = () => {
@@ -59,34 +61,324 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
           {isConnected ? `🟢 Connected (${latency}ms)` : '🔴 Disconnected'}
         </div>
 
-        {/* Exit Button */}
-        <button
-          onClick={handleExit}
-          style={{
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            color: '#fff',
-            background: 'rgba(255,0,0,0.3)',
-            border: '2px solid rgba(255,100,100,0.5)',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            pointerEvents: 'auto',
-            backdropFilter: 'blur(5px)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,0,0,0.6)'
-            e.currentTarget.style.borderColor = '#ff6666'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255,0,0,0.3)'
-            e.currentTarget.style.borderColor = 'rgba(255,100,100,0.5)'
-          }}
-        >
-          ✕ EXIT
-        </button>
+        {/* Right Side Buttons */}
+        <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
+          {/* Settings Button */}
+          <button
+            onClick={toggleSettings}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#fff',
+              background: showSettings ? 'rgba(0,200,255,0.6)' : 'rgba(0,200,255,0.3)',
+              border: '2px solid rgba(0,200,255,0.5)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              backdropFilter: 'blur(5px)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(0,200,255,0.6)'
+              e.currentTarget.style.borderColor = '#00c8ff'
+            }}
+            onMouseLeave={(e) => {
+              if (!showSettings) {
+                e.currentTarget.style.background = 'rgba(0,200,255,0.3)'
+              }
+              e.currentTarget.style.borderColor = 'rgba(0,200,255,0.5)'
+            }}
+          >
+            ⚙️ Settings
+          </button>
+
+          {/* Exit Button */}
+          <button
+            onClick={handleExit}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#fff',
+              background: 'rgba(255,0,0,0.3)',
+              border: '2px solid rgba(255,100,100,0.5)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              backdropFilter: 'blur(5px)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,0,0,0.6)'
+              e.currentTarget.style.borderColor = '#ff6666'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,0,0,0.3)'
+              e.currentTarget.style.borderColor = 'rgba(255,100,100,0.5)'
+            }}
+          >
+            ✕ EXIT
+          </button>
+        </div>
       </div>
+
+      {/* Settings Panel - แสดงที่มุมซ้ายล่าง */}
+      {showSettings && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '20px',
+          width: '280px',
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '12px',
+          border: '2px solid rgba(0, 200, 255, 0.4)',
+          boxShadow: '0 0 30px rgba(0, 200, 255, 0.2)',
+          padding: '20px',
+          zIndex: 1000,
+          fontFamily: 'Orbitron, sans-serif',
+        }}>
+          {/* Panel Header */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            borderBottom: '1px solid rgba(0, 200, 255, 0.3)',
+            paddingBottom: '10px',
+          }}>
+            <h3 style={{
+              margin: 0,
+              color: '#00c8ff',
+              fontSize: '16px',
+              textShadow: '0 0 10px rgba(0, 200, 255, 0.5)',
+            }}>
+              ⚙️ Character Settings
+            </h3>
+            <button
+              onClick={toggleSettings}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#888',
+                fontSize: '18px',
+                cursor: 'pointer',
+                padding: '0 5px',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Move Speed Slider */}
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}>
+              <label style={{ color: '#fff', fontSize: '13px' }}>
+                🏃 Move Speed
+              </label>
+              <span style={{
+                color: '#00c8ff',
+                fontSize: '13px',
+                fontWeight: 'bold',
+              }}>
+                {characterSettings.moveSpeed.toFixed(1)}x
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="10"
+              step="0.5"
+              value={characterSettings.moveSpeed}
+              onChange={(e) => updateCharacterSettings({ moveSpeed: parseFloat(e.target.value) })}
+              style={{
+                width: '100%',
+                height: '6px',
+                borderRadius: '3px',
+                background: `linear-gradient(to right, #00c8ff ${((characterSettings.moveSpeed - 0.5) / 9.5) * 100}%, #333 ${((characterSettings.moveSpeed - 0.5) / 9.5) * 100}%)`,
+                appearance: 'none',
+                cursor: 'pointer',
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '10px',
+              color: '#666',
+              marginTop: '4px',
+            }}>
+              <span>0.5x</span>
+              <span>10x</span>
+            </div>
+          </div>
+
+          {/* Rotation Speed Slider */}
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}>
+              <label style={{ color: '#fff', fontSize: '13px' }}>
+                🔄 Rotation Speed
+              </label>
+              <span style={{
+                color: '#ff00ff',
+                fontSize: '13px',
+                fontWeight: 'bold',
+              }}>
+                {characterSettings.rotationSpeed.toFixed(1)}x
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.1"
+              value={characterSettings.rotationSpeed}
+              onChange={(e) => updateCharacterSettings({ rotationSpeed: parseFloat(e.target.value) })}
+              style={{
+                width: '100%',
+                height: '6px',
+                borderRadius: '3px',
+                background: `linear-gradient(to right, #ff00ff ${((characterSettings.rotationSpeed - 0.5) / 2.5) * 100}%, #333 ${((characterSettings.rotationSpeed - 0.5) / 2.5) * 100}%)`,
+                appearance: 'none',
+                cursor: 'pointer',
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '10px',
+              color: '#666',
+              marginTop: '4px',
+            }}>
+              <span>Slow</span>
+              <span>Fast</span>
+            </div>
+          </div>
+
+          {/* Jump Force Slider */}
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}>
+              <label style={{ color: '#fff', fontSize: '13px' }}>
+                🦘 Jump Force
+              </label>
+              <span style={{
+                color: '#00ff88',
+                fontSize: '13px',
+                fontWeight: 'bold',
+              }}>
+                {characterSettings.jumpForce.toFixed(1)}x
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.1"
+              value={characterSettings.jumpForce}
+              onChange={(e) => updateCharacterSettings({ jumpForce: parseFloat(e.target.value) })}
+              style={{
+                width: '100%',
+                height: '6px',
+                borderRadius: '3px',
+                background: `linear-gradient(to right, #00ff88 ${((characterSettings.jumpForce - 0.5) / 2.5) * 100}%, #333 ${((characterSettings.jumpForce - 0.5) / 2.5) * 100}%)`,
+                appearance: 'none',
+                cursor: 'pointer',
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '10px',
+              color: '#666',
+              marginTop: '4px',
+            }}>
+              <span>Low</span>
+              <span>High</span>
+            </div>
+          </div>
+
+          {/* Render Distance Slider */}
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}>
+              <label style={{ color: '#fff', fontSize: '13px' }}>
+                👁️ View Distance
+              </label>
+              <span style={{
+                color: '#ffaa00',
+                fontSize: '13px',
+                fontWeight: 'bold',
+              }}>
+                {characterSettings.renderDistance}m
+              </span>
+            </div>
+            <input
+              type="range"
+              min="50"
+              max="2000"
+              step="50"
+              value={characterSettings.renderDistance}
+              onChange={(e) => updateCharacterSettings({ renderDistance: parseFloat(e.target.value) })}
+              style={{
+                width: '100%',
+                height: '6px',
+                borderRadius: '3px',
+                background: `linear-gradient(to right, #ffaa00 ${((characterSettings.renderDistance - 50) / 1950) * 100}%, #333 ${((characterSettings.renderDistance - 50) / 1950) * 100}%)`,
+                appearance: 'none',
+                cursor: 'pointer',
+              }}
+            />
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '10px',
+              color: '#666',
+              marginTop: '4px',
+            }}>
+              <span>Near</span>
+              <span>Far</span>
+            </div>
+          </div>
+
+          {/* Reset Button */}
+          <button
+            onClick={() => updateCharacterSettings({ moveSpeed: 1, rotationSpeed: 1, jumpForce: 1, renderDistance: 500 })}
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              color: '#fff',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            🔄 Reset to Default
+          </button>
+        </div>
+      )}
 
       {/* Exit Confirmation Dialog */}
       {showExitConfirm && (

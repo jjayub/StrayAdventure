@@ -1,39 +1,36 @@
 {
   "id": "default",
-  "name": "Neon City",
+  "name": "RP Anaxes Base",
   "skyConfig": {
     "sunPosition": [
       100,
-      20,
+      50,
       100
     ]
   },
   "lighting": {
-    "ambient": 1.2,
+    "ambient": 1.5,
     "neonLights": [
       {
         "position": [
-          -3,
-          3,
-          3
+          0,
+          10,
+          0
         ],
-        "color": "#ff0080",
-        "intensity": 30
-      },
-      {
-        "position": [
-          3,
-          3,
-          -3
-        ],
-        "color": "#00ffff",
-        "intensity": 30
+        "color": "#ffffff",
+        "intensity": 20
       }
     ]
   },
   "spawnPoint": [
     0,
-    1,
+    50,
+    0
+  ],
+  "modelScale": 1,
+  "modelPosition": [
+    0,
+    0,
     0
   ]
 }

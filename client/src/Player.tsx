@@ -5,6 +5,15 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { useSocket } from './stores/useSocket'
+import { useGame } from './stores/useGame'
+
+/**
+ * Player Props Interface - กำหนด props ที่ Player component รับได้
+ */
+interface PlayerProps {
+  /** จุดเกิดของตัวละคร [x, y, z] - รับจาก Map Config */
+  spawnPoint?: [number, number, number]
+}
 
 /**
  * Player Component
@@ -14,8 +23,9 @@ import { useSocket } from './stores/useSocket'
  * - Space กระโดด
  * - กล้องตามหลังตัวละคร (หลบสิ่งกีดขวาง)
  * - Scroll Zoom เข้า/ออก
+ * @param props.spawnPoint - ตำแหน่งเริ่มต้นของตัวละคร จาก Map Config
  */
-export function Player() {
+export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
   const body = useRef<RapierRigidBody>(null)
   const canJump = useRef(true)
   const lastSyncTime = useRef(0)
@@ -27,14 +37,16 @@ export function Player() {
 
   // Camera settings
   const cameraDistance = useRef(6) // ระยะห่างจากตัวละคร
-  const cameraHeight = useRef(2.5) // ความสูงกล้อง
   const smoothCameraPosition = useRef(new THREE.Vector3(0, 5, 10))
   const smoothCameraTarget = useRef(new THREE.Vector3())
 
   // Camera orbit offset (for mouse look-around)
-  const cameraOrbitOffset = useRef(0) // มุมหมุนกล้องจากเมาส์
+  const cameraOrbitOffsetX = useRef(0) // มุมหมุนกล้องซ้าย/ขวา (horizontal)
+  const cameraOrbitOffsetY = useRef(0) // มุมหมุนกล้องขึ้น/ลง (vertical)
+  const defaultCameraHeight = 2.5 // ความสูงกล้อง default
   const isDragging = useRef(false)
   const lastMouseX = useRef(0)
+  const lastMouseY = useRef(0)
 
   // Raycaster for camera collision, ground detection, and step-up
   const cameraRaycaster = useRef(new THREE.Raycaster())
@@ -43,6 +55,9 @@ export function Player() {
 
   // Socket connection
   const sendPosition = useSocket((state) => state.sendPosition)
+
+  // Character settings from game store (ค่าปรับแต่งจาก Settings Panel)
+  const characterSettings = useGame((state) => state.characterSettings)
 
   // Load Model & Animations
   const { scene, animations } = useGLTF('./models/Fox.glb')
@@ -63,12 +78,13 @@ export function Player() {
       cameraDistance.current = Math.max(3, Math.min(15, cameraDistance.current))
     }
 
-    // Mouse drag to orbit camera
+    // Mouse drag to orbit camera (both horizontal and vertical)
     const handleMouseDown = (e: MouseEvent) => {
       // Left click or right click to start dragging
       if (e.button === 0 || e.button === 2) {
         isDragging.current = true
         lastMouseX.current = e.clientX
+        lastMouseY.current = e.clientY
       }
     }
 
@@ -79,12 +95,22 @@ export function Player() {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging.current) {
         const deltaX = e.clientX - lastMouseX.current
+        const deltaY = e.clientY - lastMouseY.current
+
         // ความเร็วหมุนกล้อง (ไม่เร็วเกินไป)
-        const sensitivity = 0.003
-        cameraOrbitOffset.current -= deltaX * sensitivity
-        // จำกัดมุมหมุน (-PI to PI)
-        cameraOrbitOffset.current = Math.max(-Math.PI, Math.min(Math.PI, cameraOrbitOffset.current))
+        const sensitivityX = 0.003
+        const sensitivityY = 0.002
+
+        // Horizontal orbit (ซ้าย/ขวา)
+        cameraOrbitOffsetX.current -= deltaX * sensitivityX
+        cameraOrbitOffsetX.current = Math.max(-Math.PI, Math.min(Math.PI, cameraOrbitOffsetX.current))
+
+        // Vertical orbit (ขึ้น/ลง) - จำกัดมุมไม่ให้กล้องไปอยู่ใต้พื้นหรือเหนือศีรษะมากเกินไป
+        cameraOrbitOffsetY.current += deltaY * sensitivityY
+        cameraOrbitOffsetY.current = Math.max(-0.8, Math.min(1.2, cameraOrbitOffsetY.current)) // -0.8 = มองจากบน, 1.2 = มองจากล่าง
+
         lastMouseX.current = e.clientX
+        lastMouseY.current = e.clientY
       }
     }
 
@@ -127,8 +153,9 @@ export function Player() {
     const bodyPosition = body.current.translation()
     const velocity = body.current.linvel()
 
-    // 1. Rotate character with A/D keys (ลดความเร็วการหมุน)
-    const rotationSpeed = 1.5 * delta // ลดจาก 3 เป็น 1.5
+    // 1. Rotate character with A/D keys (ปรับตาม rotationSpeed จาก Settings)
+    const baseRotationSpeed = 1.5
+    const rotationSpeed = baseRotationSpeed * characterSettings.rotationSpeed * delta
     if (left) {
       characterRotation.current += rotationSpeed
     }
@@ -136,9 +163,11 @@ export function Player() {
       characterRotation.current -= rotationSpeed
     }
 
-    // 2. Movement based on character facing direction
+    // 2. Movement based on character facing direction (ปรับตาม moveSpeed จาก Settings)
+    // เพิ่ม impulse strength ชดเชย damping ที่สูงขึ้น
     const impulse = { x: 0, y: 0, z: 0 }
-    const impulseStrength = 0.12 * delta * 60 // เพิ่มจาก 0.08 เป็น 0.12
+    const baseImpulseStrength = 0.25
+    const impulseStrength = baseImpulseStrength * characterSettings.moveSpeed * delta * 60
 
     // Forward/backward direction based on character rotation
     const forwardX = -Math.sin(characterRotation.current)
@@ -148,9 +177,32 @@ export function Player() {
       impulse.x += forwardX * impulseStrength
       impulse.z += forwardZ * impulseStrength
     }
-    if (backward) {
-      impulse.x -= forwardX * impulseStrength * 0.5 // Slower backward
-      impulse.z -= forwardZ * impulseStrength * 0.5
+
+    // เมื่อกด S - หมุนตัวละคร 180° และเดินไปข้างหน้า (เข้าหากล้อง)
+    if (backward && !forward) {
+      // หมุนตัวละครกลับหลัง (ค่อยๆ หมุน)
+      const turnSpeed = 5 * delta
+      let targetRotation = characterRotation.current + Math.PI
+
+      // Normalize target rotation
+      while (targetRotation > Math.PI) targetRotation -= Math.PI * 2
+      while (targetRotation < -Math.PI) targetRotation += Math.PI * 2
+
+      // คำนวณ rotation difference
+      let rotDiff = targetRotation - characterRotation.current
+      while (rotDiff > Math.PI) rotDiff -= Math.PI * 2
+      while (rotDiff < -Math.PI) rotDiff += Math.PI * 2
+
+      // หมุนไปทางที่ใกล้กว่า
+      if (Math.abs(rotDiff) > 0.1) {
+        characterRotation.current += Math.sign(rotDiff) * turnSpeed
+      }
+
+      // เดินไปข้างหน้า (ตามทิศที่หันหน้าปัจจุบัน)
+      const currentForwardX = -Math.sin(characterRotation.current)
+      const currentForwardZ = -Math.cos(characterRotation.current)
+      impulse.x += currentForwardX * impulseStrength * 0.8
+      impulse.z += currentForwardZ * impulseStrength * 0.8
     }
 
     body.current.applyImpulse(impulse, true)
@@ -194,8 +246,9 @@ export function Player() {
       }
     }
 
-    // Limit max speed
-    const maxSpeed = 5 // เพิ่มจาก 4 เป็น 5
+    // Limit max speed (ปรับตาม moveSpeed จาก Settings)
+    const baseMaxSpeed = 5
+    const maxSpeed = baseMaxSpeed * characterSettings.moveSpeed
     const currentVelX = velocity.x
     const currentVelZ = velocity.z
     const currentSpeed = Math.sqrt(currentVelX ** 2 + currentVelZ ** 2)
@@ -222,9 +275,11 @@ export function Player() {
       canJump.current = true
     }
 
-    // กระโดดได้เฉพาะเมื่อ canJump เป็น true (ยืนบนพื้น)
+    // กระโดดได้เฉพาะเมื่อ canJump เป็น true (ยืนบนพื้น) - ปรับตาม jumpForce จาก Settings
     if (jump && canJump.current && isOnGround) {
-      body.current.setLinvel({ x: velocity.x, y: 7, z: velocity.z }, true)
+      const baseJumpVelocity = 10
+      const jumpVelocity = baseJumpVelocity * characterSettings.jumpForce
+      body.current.setLinvel({ x: velocity.x, y: jumpVelocity, z: velocity.z }, true)
       canJump.current = false // ป้องกันกระโดดซ้ำ
     }
 
@@ -246,23 +301,47 @@ export function Player() {
     const playerPos = new THREE.Vector3(bodyPosition.x, bodyPosition.y, bodyPosition.z)
     const playerHead = playerPos.clone().add(new THREE.Vector3(0, 1, 0))
 
-    // เมื่อตัวละครเคลื่อนที่ ค่อยๆ reset camera orbit กลับไปหลังตัวละคร
-    const isWalking = forward || backward
-    if (isWalking && !isDragging.current) {
-      // ค่อยๆ ลด orbit offset กลับไป 0
-      cameraOrbitOffset.current *= 0.95 // ลดลง 5% ต่อเฟรม
-      if (Math.abs(cameraOrbitOffset.current) < 0.01) {
-        cameraOrbitOffset.current = 0
+    // เมื่อกด W หรือ A/D (เดิน/หมุน) ค่อยๆ reset camera orbit กลับไปหลังตัวละคร
+    // กด S อย่างเดียวจะไม่ทำให้กล้องหมุน
+    const isWalkingForward = forward || left || right
+    if (isWalkingForward && !isDragging.current) {
+      // ค่อยๆ ลด orbit offset กลับไป 0 (ทั้ง X และ Y)
+      const resetSpeed = 0.92 // ลดลงทีละ 8% ต่อเฟรม
+
+      cameraOrbitOffsetX.current *= resetSpeed
+      if (Math.abs(cameraOrbitOffsetX.current) < 0.01) {
+        cameraOrbitOffsetX.current = 0
+      }
+
+      cameraOrbitOffsetY.current *= resetSpeed
+      if (Math.abs(cameraOrbitOffsetY.current) < 0.01) {
+        cameraOrbitOffsetY.current = 0
       }
     }
 
     // คำนวณมุมกล้อง = ทิศตัวละคร + offset จากเมาส์
-    const cameraAngle = characterRotation.current + cameraOrbitOffset.current
+    let cameraAngle = characterRotation.current + cameraOrbitOffsetX.current
+
+    // ถ้ากด S อย่างเดียว (ไม่กด W, A, D) - กล้องคงที่ไม่หมุนตาม
+    if (backward && !forward && !left && !right) {
+      const currentCamPos = smoothCameraPosition.current
+      const dx = currentCamPos.x - bodyPosition.x
+      const dz = currentCamPos.z - bodyPosition.z
+      cameraAngle = Math.atan2(dx, dz)
+    }
+
+    // คำนวณความสูงกล้องจาก Y offset (มุมขึ้น/ลง)
+    const verticalOffset = cameraOrbitOffsetY.current * 3 // คูณ 3 เพื่อให้เห็นผลชัด
+    const adjustedCameraHeight = defaultCameraHeight - verticalOffset
+
+    // ปรับระยะห่างกล้องตาม vertical angle (ยิ่งมองจากบน ยิ่งใกล้)
+    const distanceMultiplier = 1 + (cameraOrbitOffsetY.current * 0.3)
+    const adjustedDistance = cameraDistance.current * Math.max(0.5, distanceMultiplier)
 
     // Ideal camera position: behind the character (with orbit offset)
-    const idealCamX = playerPos.x + Math.sin(cameraAngle) * cameraDistance.current
-    const idealCamY = playerPos.y + cameraHeight.current
-    const idealCamZ = playerPos.z + Math.cos(cameraAngle) * cameraDistance.current
+    const idealCamX = playerPos.x + Math.sin(cameraAngle) * adjustedDistance
+    const idealCamY = playerPos.y + Math.max(1, adjustedCameraHeight) // ไม่ต่ำกว่า 1
+    const idealCamZ = playerPos.z + Math.cos(cameraAngle) * adjustedDistance
     const idealCameraPosition = new THREE.Vector3(idealCamX, idealCamY, idealCamZ)
 
     // Camera collision detection - ตรวจสอบสิ่งกีดขวางระหว่างกล้องกับตัวละคร
@@ -314,19 +393,22 @@ export function Player() {
     <RigidBody
       ref={body}
       colliders={false}
-      restitution={0.2}
-      friction={1}
-      linearDamping={0.5}
+      restitution={0}
+      friction={2}
+      linearDamping={4} // เพิ่ม damping เพื่อให้หยุดเร็วขึ้นเมื่อปล่อยปุ่ม
       angularDamping={0.5}
-      position={[0, 1, 0]}
+      position={spawnPoint}
       enabledRotations={[false, false, false]}
+      gravityScale={1.2}
+      ccd={true} // Continuous Collision Detection - ป้องกันทะลุพื้น
     >
-      <CapsuleCollider args={[0.3, 0.3]} position={[0, 0.3, 0]} />
+      {/* ยก Collider ขึ้นเพื่อไม่ให้จมลงไปในพื้น */}
+      <CapsuleCollider args={[0.35, 0.35]} position={[0, 0.7, 0]} />
       <group>
         <primitive
           object={scene}
           scale={0.02}
-          position={[0, -0.4, 0]}
+          position={[0, 0, 0]}
         />
       </group>
     </RigidBody>

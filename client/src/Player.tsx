@@ -178,47 +178,60 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
       impulse.z += forwardZ * impulseStrength
     }
 
-    // เมื่อกด S - หมุนตัวละคร 180° และเดินไปข้างหน้า (เข้าหากล้อง)
-    if (backward && !forward) {
-      // หมุนตัวละครกลับหลัง (ค่อยๆ หมุน)
-      const turnSpeed = 5 * delta
-      let targetRotation = characterRotation.current + Math.PI
+    // เมื่อกด S อย่างเดียว - หมุนตัวละครหันหน้าเข้าหากล้อง และวิ่งเข้าหากล้อง
+    // กล้องจะคงที่ ผู้เล่นจะเห็นหน้าตัวละคร
+    if (backward && !forward && !left && !right) {
+      // คำนวณทิศทางจากตัวละครไปยังกล้อง
+      const camPos = smoothCameraPosition.current
+      const toCameraX = camPos.x - bodyPosition.x
+      const toCameraZ = camPos.z - bodyPosition.z
 
-      // Normalize target rotation
-      while (targetRotation > Math.PI) targetRotation -= Math.PI * 2
-      while (targetRotation < -Math.PI) targetRotation += Math.PI * 2
+      // คำนวณมุมที่ตัวละครควรหันหน้าไป (หันหน้าเข้าหากล้อง)
+      let targetRotation = Math.atan2(-toCameraX, -toCameraZ)
 
-      // คำนวณ rotation difference
+      // ค่อยๆ หมุนไปยังทิศทางเป้าหมาย
+      const turnSpeed = 8 * delta * characterSettings.rotationSpeed
       let rotDiff = targetRotation - characterRotation.current
+
+      // Normalize rotation difference
       while (rotDiff > Math.PI) rotDiff -= Math.PI * 2
       while (rotDiff < -Math.PI) rotDiff += Math.PI * 2
 
       // หมุนไปทางที่ใกล้กว่า
-      if (Math.abs(rotDiff) > 0.1) {
-        characterRotation.current += Math.sign(rotDiff) * turnSpeed
+      if (Math.abs(rotDiff) > 0.05) {
+        characterRotation.current += Math.sign(rotDiff) * Math.min(Math.abs(rotDiff), turnSpeed)
+      } else {
+        characterRotation.current = targetRotation
       }
 
-      // เดินไปข้างหน้า (ตามทิศที่หันหน้าปัจจุบัน)
-      const currentForwardX = -Math.sin(characterRotation.current)
-      const currentForwardZ = -Math.cos(characterRotation.current)
-      impulse.x += currentForwardX * impulseStrength * 0.8
-      impulse.z += currentForwardZ * impulseStrength * 0.8
+      // วิ่งเข้าหากล้อง (ไปในทิศทางที่หันหน้า)
+      const runX = -Math.sin(characterRotation.current)
+      const runZ = -Math.cos(characterRotation.current)
+      impulse.x += runX * impulseStrength
+      impulse.z += runZ * impulseStrength
+    }
+
+    // กด S + A/D = ถอยหลังพร้อมหมุน (backward + turn)
+    if (backward && !forward && (left || right)) {
+      // ถอยหลังช้าๆ
+      impulse.x -= forwardX * impulseStrength * 0.5
+      impulse.z -= forwardZ * impulseStrength * 0.5
     }
 
     body.current.applyImpulse(impulse, true)
 
-    // Step-Up Logic - ตรวจจับบันไดและยกตัวละครขึ้น
+    // Step-Up Logic - ตรวจจับบันไดและยกตัวละครขึ้นอัตโนมัติ
     const isMoving = forward || backward
     if (isMoving) {
-      const stepHeight = 0.5 // ความสูงสูงสุดที่ก้าวขึ้นได้
-      const stepCheckDistance = 0.4 // ระยะตรวจด้านหน้า
+      const stepHeight = 1.0 // ความสูงสูงสุดที่ก้าวขึ้นได้ (เพิ่มจาก 0.5)
+      const stepCheckDistance = 0.8 // ระยะตรวจด้านหน้า (เพิ่มจาก 0.4)
 
       // ทิศทางที่ตัวละครกำลังเคลื่อนที่
       const moveDir = new THREE.Vector3(forwardX, 0, forwardZ)
       if (backward) moveDir.negate()
 
-      // ยิง Ray ด้านหน้าระดับเท้า
-      const feetPos = new THREE.Vector3(bodyPosition.x, bodyPosition.y - 0.2, bodyPosition.z)
+      // ยิง Ray ด้านหน้าระดับเท้า (ปรับให้ตรงกับ Collider ที่ y=0.7)
+      const feetPos = new THREE.Vector3(bodyPosition.x, bodyPosition.y + 0.1, bodyPosition.z)
       stepRaycaster.current.set(feetPos, moveDir)
       stepRaycaster.current.far = stepCheckDistance
 
@@ -227,7 +240,7 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
       if (frontHits.length > 0) {
         // มีสิ่งกีดขวางด้านหน้า - ตรวจว่าเป็นบันไดหรือไม่
         // ยิง Ray จากจุดที่สูงขึ้นไปดูว่าว่างไหม
-        const higherPos = new THREE.Vector3(bodyPosition.x, bodyPosition.y + stepHeight, bodyPosition.z)
+        const higherPos = new THREE.Vector3(bodyPosition.x, bodyPosition.y + stepHeight + 0.5, bodyPosition.z)
         stepRaycaster.current.set(higherPos, moveDir)
         stepRaycaster.current.far = stepCheckDistance
 
@@ -236,11 +249,11 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
         // ถ้าด้านบนว่าง = เป็นบันได = ยกตัวละครขึ้น
         if (upperHits.length === 0) {
           const currentVel = body.current.linvel()
-          // เพิ่มแรงยกขึ้นเล็กน้อย
+          // เพิ่มแรงยกขึ้นให้มากพอที่จะก้าวขึ้นบันได
           body.current.setLinvel({
-            x: currentVel.x,
-            y: Math.max(currentVel.y, 3), // ยกขึ้น
-            z: currentVel.z
+            x: currentVel.x * 0.8, // ลดความเร็วด้านข้างเล็กน้อย
+            y: Math.max(currentVel.y, 6), // เพิ่มแรงยก (จาก 3 เป็น 6)
+            z: currentVel.z * 0.8
           }, true)
         }
       }
@@ -258,17 +271,18 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     }
 
     // 3. Jumping - use raycast to detect ground (ต้องยืนบนพื้นจริงๆ เท่านั้น)
-    const playerFeet = new THREE.Vector3(bodyPosition.x, bodyPosition.y, bodyPosition.z)
+    // ยิง raycast จากตำแหน่งต่ำกว่า body center เล็กน้อย (เพราะ Collider อยู่สูงกว่า)
+    const playerFeet = new THREE.Vector3(bodyPosition.x, bodyPosition.y + 0.3, bodyPosition.z)
     const downDirection = new THREE.Vector3(0, -1, 0)
 
     groundRaycaster.current.set(playerFeet, downDirection)
-    groundRaycaster.current.far = 0.6 // ระยะตรวจพื้น (ลดลงเพื่อความแม่นยำ)
+    groundRaycaster.current.far = 1.2 // เพิ่มระยะตรวจพื้นให้ถึง (Collider อยู่ที่ y=0.7)
 
     const groundHits = groundRaycaster.current.intersectObjects(threeScene.children, true)
 
     // ต้องมี raycast hit จริงๆ ถึงจะถือว่าอยู่บนพื้น
-    // ไม่ใช้ velocity.y เพราะจะทำให้กระโดดกลางอากาศได้
-    const isOnGround = groundHits.length > 0 && groundHits[0].distance < 0.6
+    // ตรวจสอบว่า hit อยู่ใกล้พอที่จะถือว่ายืนบนพื้น
+    const isOnGround = groundHits.length > 0 && groundHits[0].distance < 1.2
 
     // Reset canJump เฉพาะเมื่อยืนบนพื้นจริงๆ
     if (isOnGround) {
@@ -301,10 +315,13 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     const playerPos = new THREE.Vector3(bodyPosition.x, bodyPosition.y, bodyPosition.z)
     const playerHead = playerPos.clone().add(new THREE.Vector3(0, 1, 0))
 
+    // ตรวจสอบว่ากด S อย่างเดียวหรือไม่ (U-turn mode)
+    const isUTurnMode = backward && !forward && !left && !right
+
     // เมื่อกด W หรือ A/D (เดิน/หมุน) ค่อยๆ reset camera orbit กลับไปหลังตัวละคร
-    // กด S อย่างเดียวจะไม่ทำให้กล้องหมุน
-    const isWalkingForward = forward || left || right
-    if (isWalkingForward && !isDragging.current) {
+    // กด S อย่างเดียวจะไม่ทำให้กล้องหมุน - กล้องคงที่
+    const shouldResetCamera = (forward || left || right) && !isDragging.current
+    if (shouldResetCamera) {
       // ค่อยๆ ลด orbit offset กลับไป 0 (ทั้ง X และ Y)
       const resetSpeed = 0.92 // ลดลงทีละ 8% ต่อเฟรม
 
@@ -319,15 +336,18 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
       }
     }
 
-    // คำนวณมุมกล้อง = ทิศตัวละคร + offset จากเมาส์
-    let cameraAngle = characterRotation.current + cameraOrbitOffsetX.current
+    // คำนวณมุมกล้อง
+    let cameraAngle: number
 
-    // ถ้ากด S อย่างเดียว (ไม่กด W, A, D) - กล้องคงที่ไม่หมุนตาม
-    if (backward && !forward && !left && !right) {
+    if (isUTurnMode) {
+      // กด S อย่างเดียว - กล้องคงที่ไม่หมุนตาม (ผู้เล่นเห็นหน้าตัวละคร)
       const currentCamPos = smoothCameraPosition.current
       const dx = currentCamPos.x - bodyPosition.x
       const dz = currentCamPos.z - bodyPosition.z
       cameraAngle = Math.atan2(dx, dz)
+    } else {
+      // ปกติ - กล้องอยู่หลังตัวละคร + offset จากเมาส์
+      cameraAngle = characterRotation.current + cameraOrbitOffsetX.current
     }
 
     // คำนวณความสูงกล้องจาก Y offset (มุมขึ้น/ลง)
@@ -345,37 +365,51 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     const idealCameraPosition = new THREE.Vector3(idealCamX, idealCamY, idealCamZ)
 
     // Camera collision detection - ตรวจสอบสิ่งกีดขวางระหว่างกล้องกับตัวละคร
-    const directionToCamera = idealCameraPosition.clone().sub(playerHead).normalize()
-    const distanceToIdealPos = playerHead.distanceTo(idealCameraPosition)
+    // ยิง ray จากตำแหน่งที่สูงกว่า playerHead เพื่อหลีกเลี่ยงการโดนพื้น
+    const rayOrigin = playerHead.clone().add(new THREE.Vector3(0, 0.5, 0))
+    const directionToCamera = idealCameraPosition.clone().sub(rayOrigin).normalize()
+    const distanceToIdealPos = rayOrigin.distanceTo(idealCameraPosition)
 
-    cameraRaycaster.current.set(playerHead, directionToCamera)
+    cameraRaycaster.current.set(rayOrigin, directionToCamera)
     cameraRaycaster.current.far = distanceToIdealPos
 
     // Check for intersections with scene objects (excluding player)
     const intersects = cameraRaycaster.current.intersectObjects(threeScene.children, true)
 
     let finalCameraPosition = idealCameraPosition.clone()
+    let hasRealObstacle = false
 
     // If there's an obstruction, move camera closer
     if (intersects.length > 0) {
-      // Find the closest intersection that's not the player
+      // Find the closest intersection that's not the player or ground
       for (const hit of intersects) {
         // Skip if it's too close (probably the player itself)
-        if (hit.distance > 0.5) {
-          // Place camera slightly in front of the obstruction
-          const safeDistance = Math.max(1.5, hit.distance - 0.5)
-          finalCameraPosition = playerHead.clone().add(directionToCamera.multiplyScalar(safeDistance))
-          break
+        if (hit.distance < 2.0) continue
+
+        // Skip if hit normal points upward (it's ground/floor) or downward (ceiling)
+        if (hit.face && hit.face.normal) {
+          const worldNormal = hit.face.normal.clone()
+          if (hit.object.matrixWorld) {
+            worldNormal.transformDirection(hit.object.matrixWorld)
+          }
+          // ถ้า normal ชี้ขึ้นหรือลง (|y| > 0.5) แสดงว่าเป็นพื้นหรือเพดาน ให้ข้าม
+          if (Math.abs(worldNormal.y) > 0.5) continue
         }
+
+        // มี obstacle จริงๆ (กำแพง, สิ่งกีดขวาง)
+        hasRealObstacle = true
+        const safeDistance = Math.max(2.5, hit.distance - 1.0)
+        finalCameraPosition = rayOrigin.clone().add(directionToCamera.clone().multiplyScalar(safeDistance))
+        break
       }
     }
 
     const idealTarget = playerHead.clone()
 
-    // Smooth camera movement (faster when avoiding obstacles)
-    const lerpSpeed = intersects.length > 0 ? delta * 10 : delta * 5
+    // Smooth camera movement - ใช้ความเร็วคงที่เพื่อป้องกัน oscillation
+    const lerpSpeed = hasRealObstacle ? delta * 2.5 : delta * 3
     smoothCameraPosition.current.lerp(finalCameraPosition, lerpSpeed)
-    smoothCameraTarget.current.lerp(idealTarget, delta * 10)
+    smoothCameraTarget.current.lerp(idealTarget, delta * 4)
 
     // Update camera
     camera.position.copy(smoothCameraPosition.current)

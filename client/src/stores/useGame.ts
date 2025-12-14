@@ -40,6 +40,15 @@ interface GameState {
   /** ชื่อผู้เล่น */
   nickname: string
 
+  /** Health (0-100) */
+  health: number
+  /** Stamina (0-100) */
+  stamina: number
+  /** กำลัง Sprint อยู่หรือไม่ */
+  isSprinting: boolean
+  /** Stamina หมด ต้องรอ recover เต็มก่อน */
+  isStaminaDepleted: boolean
+
   goToNicknameInput: () => void
   goToMapSelection: () => void
   selectMap: (map: MapInfo) => void
@@ -55,6 +64,17 @@ interface GameState {
   updateCharacterSettings: (settings: Partial<CharacterSettings>) => void
   /** ตั้งชื่อผู้เล่น */
   setNickname: (nickname: string) => void
+
+  /** ตั้งค่า Health */
+  setHealth: (health: number) => void
+  /** ตั้งค่า Stamina */
+  setStamina: (stamina: number) => void
+  /** ตั้งค่า Sprint state */
+  setSprinting: (isSprinting: boolean) => void
+  /** ตั้งค่า Stamina Depleted state */
+  setStaminaDepleted: (isDepleted: boolean) => void
+  /** Reset player stats (health, stamina) เมื่อเริ่มเกมใหม่ */
+  resetPlayerStats: () => void
 }
 
 /** ค่าเริ่มต้นของ Character Settings */
@@ -74,10 +94,23 @@ export const useGame = create<GameState>((set) => ({
   characterSettings: { ...defaultCharacterSettings },
   nickname: '',
 
+  // Player Stats
+  health: 100,
+  stamina: 100,
+  isSprinting: false,
+  isStaminaDepleted: false,
+
   goToNicknameInput: () => set({ gameState: 'nicknameInput' }),
   goToMapSelection: () => set({ gameState: 'mapSelection' }),
   selectMap: (map) => set({ selectedMap: map }),
-  startGame: () => set({ gameState: 'playing' }),
+  startGame: () => set({
+    gameState: 'playing',
+    // Reset player stats เมื่อเริ่มเกมใหม่
+    health: 100,
+    stamina: 100,
+    isSprinting: false,
+    isStaminaDepleted: false,
+  }),
   pauseGame: () => set({ gameState: 'paused' }),
   resumeGame: () => set({ gameState: 'playing' }),
   goToMenu: () => set({ gameState: 'menu', selectedMap: null }),
@@ -88,4 +121,16 @@ export const useGame = create<GameState>((set) => ({
     characterSettings: { ...state.characterSettings, ...settings }
   })),
   setNickname: (nickname) => set({ nickname }),
+
+  // Player Stats Actions
+  setHealth: (health) => set({ health: Math.max(0, Math.min(100, health)) }),
+  setStamina: (stamina) => set({ stamina: Math.max(0, Math.min(100, stamina)) }),
+  setSprinting: (isSprinting) => set({ isSprinting }),
+  setStaminaDepleted: (isDepleted) => set({ isStaminaDepleted: isDepleted }),
+  resetPlayerStats: () => set({
+    health: 100,
+    stamina: 100,
+    isSprinting: false,
+    isStaminaDepleted: false,
+  }),
 }))

@@ -67,6 +67,14 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
   // Character settings from game store (ค่าปรับแต่งจาก Settings Panel)
   const characterSettings = useGame((state) => state.characterSettings)
 
+  // Stamina & Sprint state from game store
+  const stamina = useGame((state) => state.stamina)
+  const setStamina = useGame((state) => state.setStamina)
+  const isSprinting = useGame((state) => state.isSprinting)
+  const setSprinting = useGame((state) => state.setSprinting)
+  const isStaminaDepleted = useGame((state) => state.isStaminaDepleted)
+  const setStaminaDepleted = useGame((state) => state.setStaminaDepleted)
+
   // Load Model & Animations
   const { scene, animations } = useGLTF('./models/Fox.glb')
   const { actions } = useAnimations(animations, scene)
@@ -162,14 +170,50 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
   useFrame((_, delta) => {
     if (!body.current) return
 
-    const { forward, backward, left, right, jump } = getKeys()
+    const { forward, backward, left, right, jump, sprint } = getKeys()
 
     // Get current state
     const bodyPosition = body.current.translation()
     const velocity = body.current.linvel()
 
+    // === SPRINT & STAMINA LOGIC ===
+    const isMoving = forward || backward
+    const wantToSprint = sprint && isMoving && !isStaminaDepleted
+
+    // Handle sprinting state and stamina
+    if (wantToSprint && stamina > 0) {
+      // กำลัง Sprint - ลด stamina
+      if (!isSprinting) setSprinting(true)
+      const staminaDrain = 25 * delta // ลด 25% ต่อวินาที
+      const newStamina = Math.max(0, stamina - staminaDrain)
+      setStamina(newStamina)
+
+      // ถ้า stamina หมด - เข้าสู่ depleted mode
+      if (newStamina <= 0) {
+        setStaminaDepleted(true)
+        setSprinting(false)
+      }
+    } else {
+      // ไม่ได้ Sprint - recover stamina
+      if (isSprinting) setSprinting(false)
+
+      if (stamina < 100) {
+        // Recover rate: 20% ต่อวินาที (ช้ากว่า drain)
+        const staminaRecover = 20 * delta
+        const newStamina = Math.min(100, stamina + staminaRecover)
+        setStamina(newStamina)
+
+        // ถ้า stamina เต็มแล้ว - ออกจาก depleted mode
+        if (newStamina >= 100 && isStaminaDepleted) {
+          setStaminaDepleted(false)
+        }
+      }
+    }
+
+    // Sprint multiplier - ง่ายๆ แค่ 1.5x เมื่อ sprint
+    const sprintMultiplier = isSprinting ? 1.5 : 1.0
+
     // 1. Rotate character with A/D keys (ปรับตาม rotationSpeed จาก Settings)
-    // Base speed ปรับให้ 1x รู้สึกเหมาะสม
     const baseRotationSpeed = 2.25
     const rotationSpeed = baseRotationSpeed * characterSettings.rotationSpeed * delta
     if (left) {
@@ -180,10 +224,9 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     }
 
     // 2. Movement based on character facing direction (ปรับตาม moveSpeed จาก Settings)
-    // Base speed ปรับให้ 1x รู้สึกเหมาะสม
     const impulse = { x: 0, y: 0, z: 0 }
     const baseImpulseStrength = 0.625
-    const impulseStrength = baseImpulseStrength * characterSettings.moveSpeed * delta * 60
+    const impulseStrength = baseImpulseStrength * characterSettings.moveSpeed * sprintMultiplier * delta * 60
 
     // Forward/backward direction based on character rotation
     const forwardX = -Math.sin(characterRotation.current)
@@ -195,50 +238,51 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     }
 
     // เมื่อกด S อย่างเดียว - หมุนตัวละครหันหน้าเข้าหากล้อง และวิ่งเข้าหากล้อง
-    // กล้องจะคงที่ ผู้เล่นจะเห็นหน้าตัวละคร
     if (backward && !forward && !left && !right) {
-      // คำนวณทิศทางจากตัวละครไปยังกล้อง
       const camPos = smoothCameraPosition.current
       const toCameraX = camPos.x - bodyPosition.x
       const toCameraZ = camPos.z - bodyPosition.z
 
-      // คำนวณมุมที่ตัวละครควรหันหน้าไป (หันหน้าเข้าหากล้อง)
       let targetRotation = Math.atan2(-toCameraX, -toCameraZ)
 
-      // ค่อยๆ หมุนไปยังทิศทางเป้าหมาย
       const turnSpeed = 8 * delta * characterSettings.rotationSpeed
       let rotDiff = targetRotation - characterRotation.current
 
-      // Normalize rotation difference
       while (rotDiff > Math.PI) rotDiff -= Math.PI * 2
       while (rotDiff < -Math.PI) rotDiff += Math.PI * 2
 
-      // หมุนไปทางที่ใกล้กว่า
       if (Math.abs(rotDiff) > 0.05) {
         characterRotation.current += Math.sign(rotDiff) * Math.min(Math.abs(rotDiff), turnSpeed)
       } else {
         characterRotation.current = targetRotation
       }
 
-      // วิ่งเข้าหากล้อง (ไปในทิศทางที่หันหน้า)
       const runX = -Math.sin(characterRotation.current)
       const runZ = -Math.cos(characterRotation.current)
       impulse.x += runX * impulseStrength
       impulse.z += runZ * impulseStrength
     }
 
-    // กด S + A/D = ถอยหลังพร้อมหมุน (backward + turn)
+    // กด S + A/D = ถอยหลังพร้อมหมุน
     if (backward && !forward && (left || right)) {
-      // ถอยหลังช้าๆ
       impulse.x -= forwardX * impulseStrength * 0.5
       impulse.z -= forwardZ * impulseStrength * 0.5
     }
 
     body.current.applyImpulse(impulse, true)
 
+    // Limit max speed
+    const baseMaxSpeed = 12.5
+    const maxSpeed = baseMaxSpeed * characterSettings.moveSpeed * sprintMultiplier
+    const currentSpeed = Math.sqrt(velocity.x ** 2 + velocity.z ** 2)
+    if (currentSpeed > maxSpeed) {
+      const scale = maxSpeed / currentSpeed
+      body.current.setLinvel({ x: velocity.x * scale, y: velocity.y, z: velocity.z * scale }, true)
+    }
+
     // Step-Up Logic - ตรวจจับบันไดและยกตัวละครขึ้นอัตโนมัติ
-    const isMoving = forward || backward
-    if (isMoving) {
+    const isMovingForStep = forward || backward
+    if (isMovingForStep) {
       const stepHeight = 1.0 // ความสูงสูงสุดที่ก้าวขึ้นได้ (เพิ่มจาก 0.5)
       const stepCheckDistance = 0.8 // ระยะตรวจด้านหน้า (เพิ่มจาก 0.4)
 
@@ -273,18 +317,6 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
           }, true)
         }
       }
-    }
-
-    // Limit max speed (ปรับตาม moveSpeed จาก Settings)
-    // Base speed ปรับให้ 1x รู้สึกเหมาะสม
-    const baseMaxSpeed = 12.5
-    const maxSpeed = baseMaxSpeed * characterSettings.moveSpeed
-    const currentVelX = velocity.x
-    const currentVelZ = velocity.z
-    const currentSpeed = Math.sqrt(currentVelX ** 2 + currentVelZ ** 2)
-    if (currentSpeed > maxSpeed) {
-      const scale = maxSpeed / currentSpeed
-      body.current.setLinvel({ x: currentVelX * scale, y: velocity.y, z: currentVelZ * scale }, true)
     }
 
     // 3. Jumping - use raycast to detect ground (ต้องยืนบนพื้นจริงๆ เท่านั้น)

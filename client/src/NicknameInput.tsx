@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useGame } from './stores/useGame'
-import { playHoverSound, playClickSound } from './hooks/useUISound'
+import { playHoverSound, playClickSound, playKeyPressSound } from './hooks/useUISound'
 
 /**
  * NicknameInput Component
@@ -140,6 +140,12 @@ export function NicknameInput() {
             onChange={(e) => {
               setInputValue(e.target.value)
               setError('')
+            }}
+            onKeyDown={(e) => {
+              // เล่นเสียง mechanical keyboard เมื่อกดปุ่ม (ไม่รวม modifier keys)
+              if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete') {
+                playKeyPressSound()
+              }
             }}
             onKeyPress={handleKeyPress}
             placeholder="Nickname"

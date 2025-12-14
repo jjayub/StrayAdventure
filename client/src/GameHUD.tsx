@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGame } from './stores/useGame'
 import { playHoverSound, playClickSound } from './hooks/useUISound'
+import { HealthStaminaBar } from './components/HealthStaminaBar'
 
 /**
  * GameHUD Component - Stray Style
@@ -34,6 +35,9 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
 
   return (
     <>
+      {/* Health & Stamina Bars */}
+      <HealthStaminaBar />
+
       {/* Top Bar - Stray Style */}
       <div style={{
         position: 'fixed',

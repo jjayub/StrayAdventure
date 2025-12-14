@@ -374,6 +374,93 @@ export const playLandingSound = (volume: number = 0.3): void => {
 }
 
 /**
+ * เล่นเสียงพิมพ์แบบ Mechanical Keyboard
+ * เสียง satisfying click สำหรับ text input
+ * @param volume - ระดับเสียง (0.0 - 1.0), default 0.12
+ */
+export const playKeyPressSound = (volume: number = 0.12): void => {
+  try {
+    const ctx = getAudioContext()
+
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+
+    const currentTime = ctx.currentTime
+
+    // Random variation สำหรับ pitch เพื่อให้เสียงไม่ซ้ำกัน
+    const pitchVariation = 0.95 + Math.random() * 0.1
+
+    // Click component - เสียง click คม (mechanical switch)
+    const clickOsc = ctx.createOscillator()
+    clickOsc.type = 'square'
+    clickOsc.frequency.setValueAtTime(1800 * pitchVariation, currentTime)
+    clickOsc.frequency.exponentialRampToValueAtTime(800 * pitchVariation, currentTime + 0.015)
+
+    // Thock component - เสียง thock ทุ้ม (keycap bottom out)
+    const thockOsc = ctx.createOscillator()
+    thockOsc.type = 'sine'
+    thockOsc.frequency.setValueAtTime(180 * pitchVariation, currentTime)
+    thockOsc.frequency.exponentialRampToValueAtTime(80, currentTime + 0.03)
+
+    // Mid-range click
+    const midOsc = ctx.createOscillator()
+    midOsc.type = 'triangle'
+    midOsc.frequency.setValueAtTime(600 * pitchVariation, currentTime)
+    midOsc.frequency.exponentialRampToValueAtTime(400, currentTime + 0.02)
+
+    // Gain for click - very short attack
+    const clickGain = ctx.createGain()
+    clickGain.gain.setValueAtTime(volume * 0.6, currentTime)
+    clickGain.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.025)
+
+    // Gain for thock - slightly longer
+    const thockGain = ctx.createGain()
+    thockGain.gain.setValueAtTime(volume, currentTime + 0.003)
+    thockGain.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.05)
+
+    // Gain for mid
+    const midGain = ctx.createGain()
+    midGain.gain.setValueAtTime(volume * 0.4, currentTime)
+    midGain.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.03)
+
+    // High-pass filter สำหรับ click (เอาเฉพาะเสียงสูง)
+    const clickFilter = ctx.createBiquadFilter()
+    clickFilter.type = 'highpass'
+    clickFilter.frequency.value = 1000
+
+    // Low-pass filter สำหรับ thock (เอาเฉพาะเสียงต่ำ)
+    const thockFilter = ctx.createBiquadFilter()
+    thockFilter.type = 'lowpass'
+    thockFilter.frequency.value = 400
+
+    // Connect click path
+    clickOsc.connect(clickFilter)
+    clickFilter.connect(clickGain)
+    clickGain.connect(ctx.destination)
+
+    // Connect thock path
+    thockOsc.connect(thockFilter)
+    thockFilter.connect(thockGain)
+    thockGain.connect(ctx.destination)
+
+    // Connect mid path
+    midOsc.connect(midGain)
+    midGain.connect(ctx.destination)
+
+    // Play
+    clickOsc.start(currentTime)
+    thockOsc.start(currentTime)
+    midOsc.start(currentTime)
+    clickOsc.stop(currentTime + 0.04)
+    thockOsc.stop(currentTime + 0.06)
+    midOsc.stop(currentTime + 0.04)
+  } catch (error) {
+    console.warn('Could not play key press sound:', error)
+  }
+}
+
+/**
  * Custom hook สำหรับ UI sounds
  * @returns Object containing sound functions
  */
@@ -386,6 +473,7 @@ export const useUISound = () => {
     playJumpSound,
     playFootstepSound,
     playLandingSound,
+    playKeyPressSound,
   }
 }
 

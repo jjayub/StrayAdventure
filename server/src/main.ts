@@ -11,6 +11,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from client build (for production)
+const CLIENT_DIST = path.join(__dirname, '../../client/dist');
+const CLIENT_PUBLIC = path.join(__dirname, '../../client/public');
+
+// Serve client static files
+app.use(express.static(CLIENT_DIST));
+app.use(express.static(CLIENT_PUBLIC));
+
 // Static files for maps
 const MAPS_DIR = path.join(__dirname, '../../client/public/maps');
 
@@ -319,9 +327,21 @@ async function generatePreviewPlaceholder(mapDir: string, mapName: string): Prom
   );
 }
 
+// ============ SPA FALLBACK ============
+// สำหรับ React Router - ให้ทุก route ที่ไม่ใช่ API กลับไปที่ index.html
+app.get('*', (req, res) => {
+  const indexPath = path.join(CLIENT_DIST, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Client not built. Run: cd client && npm run build');
+  }
+});
+
 // ============ START SERVER ============
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   console.log(`📁 Maps directory: ${MAPS_DIR}`);
+  console.log(`📂 Client dist: ${CLIENT_DIST}`);
 });

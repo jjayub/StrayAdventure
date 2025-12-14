@@ -1,12 +1,36 @@
+import { useState, useCallback } from 'react'
 import { useGame } from './stores/useGame'
+import { playHoverSound, playClickSound } from './hooks/useUISound'
 
 /**
  * Main Menu Component
  * แสดงหน้าเมนูหลักก่อนเริ่มเกม
- * ใช้ภาพแมวเป็น Background (Stray-inspired)
+ * สไตล์ Stray - Minimalist Dark Theme with Spotlight
  */
 export function MainMenu() {
   const { goToMapSelection, toggleControls, showControls } = useGame()
+  const [hoveredButton, setHoveredButton] = useState<string | null>('start')
+
+  /**
+   * Handle button hover พร้อมเล่นเสียง
+   * เล่นเสียงเฉพาะเมื่อเปลี่ยนปุ่มที่ hover
+   */
+  const handleHover = useCallback((buttonId: string) => {
+    setHoveredButton((prev) => {
+      if (prev !== buttonId) {
+        playHoverSound()
+      }
+      return buttonId
+    })
+  }, [])
+
+  /**
+   * Handle button click พร้อมเล่นเสียง
+   */
+  const handleClick = useCallback((action: () => void) => {
+    playClickSound()
+    action()
+  }, [])
 
   return (
     <div style={{
@@ -16,7 +40,9 @@ export function MainMenu() {
       width: '100%',
       height: '100%',
       zIndex: 2000,
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
+      background: '#000',
+      overflow: 'hidden',
     }}>
       {/* Background Image */}
       <div style={{
@@ -28,27 +54,17 @@ export function MainMenu() {
         backgroundImage: 'url("/menu-bg.jpg")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        filter: 'brightness(1) saturate(1.3)',
+        filter: 'brightness(1.1) saturate(1.1)',
       }} />
 
-      {/* Gradient Overlay for Cyberpunk feel */}
+      {/* Light Overlay for text readability */}
       <div style={{
         position: 'absolute',
         top: 0,
         left: 0,
         width: '100%',
         height: '100%',
-        background: 'linear-gradient(135deg, rgba(255,0,128,0.15) 0%, rgba(0,0,0,0.5) 50%, rgba(0,255,255,0.15) 100%)',
-      }} />
-
-      {/* Scanlines Effect (Retro CRT) */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px)',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)',
         pointerEvents: 'none',
       }} />
 
@@ -62,114 +78,133 @@ export function MainMenu() {
         justifyContent: 'center',
         alignItems: 'center',
       }}>
-        {/* Game Title - Animated Neon Cyberpunk Style */}
-        <h1
-          className="neon-title"
+        {/* Game Logo - Proportional to screen width, aspect ratio preserved */}
+        <img
+          src="/logo.png"
+          alt="Stray"
           style={{
-            fontSize: '100px',
-            fontWeight: 900,
-            fontFamily: "'Orbitron', sans-serif",
-            color: '#fff',
+            width: '45vw',
+            height: 'auto',
+            maxWidth: '800px',
+            minWidth: '280px',
             marginBottom: '50px',
-            letterSpacing: '20px',
-            position: 'relative',
+            filter: 'drop-shadow(0 0 30px rgba(255,255,255,0.4))',
+            objectFit: 'contain',
           }}
-        >
-          <span className="neon-title-text">ZENKO</span>
-        </h1>
+        />
 
-        {/* Menu Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <MenuButton onClick={goToMapSelection} primary>
-            ▶ START GAME
-          </MenuButton>
-
-          <MenuButton onClick={toggleControls}>
-            🎮 HOW TO PLAY
-          </MenuButton>
+        {/* Menu Buttons - Stray Style */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          <StrayMenuButton
+            label="START GAME"
+            isHovered={hoveredButton === 'start'}
+            onHover={() => handleHover('start')}
+            onClick={() => handleClick(goToMapSelection)}
+          />
+          <StrayMenuButton
+            label="SETTINGS"
+            isHovered={hoveredButton === 'settings'}
+            onHover={() => handleHover('settings')}
+            onClick={() => handleClick(toggleControls)}
+          />
+          <StrayMenuButton
+            label="CREDITS"
+            isHovered={hoveredButton === 'credits'}
+            onHover={() => handleHover('credits')}
+            onClick={() => handleClick(() => { })}
+          />
+          {/* Quit button hidden for web version - uncomment for desktop app */}
+          {/* <StrayMenuButton
+            label="QUIT"
+            isHovered={hoveredButton === 'quit'}
+            onHover={() => handleHover('quit')}
+            onClick={() => handleClick(() => {})}
+          /> */}
         </div>
 
-        {/* Footer */}
+        {/* Version Info - Bottom Left */}
         <p style={{
           position: 'absolute',
           bottom: '20px',
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: '12px',
-          letterSpacing: '2px',
+          left: '20px',
+          color: 'rgba(255,255,255,0.3)',
+          fontSize: '11px',
+          letterSpacing: '1px',
         }}>
-          Personal Hobby Project • Not affiliated with BlueTwelve Studio
+          v1.0.0 (Fan Project)
         </p>
+
       </div>
 
-      {/* Controls Modal */}
+      {/* Controls/Settings Modal */}
       {showControls && (
-        <ControlsModal onClose={toggleControls} />
+        <SettingsModal onClose={toggleControls} />
       )}
     </div>
   )
 }
 
 /**
- * Menu Button Component
- * ปุ่มสำหรับเมนู พร้อม Hover Effect
+ * Stray-Style Menu Button
+ * ปุ่มเมนูแบบ minimalist เหมือน Stray
  */
-function MenuButton({
-  children,
+function StrayMenuButton({
+  label,
+  isHovered,
+  onHover,
   onClick,
-  primary = false
 }: {
-  children: React.ReactNode
+  label: string
+  isHovered: boolean
+  onHover: () => void
   onClick: () => void
-  primary?: boolean
 }) {
   return (
     <button
       onClick={onClick}
+      onMouseEnter={onHover}
+      onFocus={onHover}
       style={{
-        padding: '18px 50px',
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: primary ? '#000' : '#fff',
-        background: primary
-          ? 'linear-gradient(90deg, #00ffff, #00ff88)'
-          : 'rgba(0,0,0,0.5)',
-        border: primary ? 'none' : '2px solid rgba(255,255,255,0.5)',
-        borderRadius: '8px',
+        padding: '12px 40px',
+        fontSize: '16px',
+        fontWeight: 500,
+        color: isHovered ? '#000' : 'rgba(255,255,255,0.7)',
+        background: isHovered ? 'rgba(255,255,255,0.95)' : 'transparent',
+        border: 'none',
+        borderRadius: '2px',
         cursor: 'pointer',
-        letterSpacing: '3px',
-        transition: 'all 0.3s ease',
-        minWidth: '280px',
-        backdropFilter: 'blur(10px)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'scale(1.05)'
-        e.currentTarget.style.boxShadow = primary
-          ? '0 0 30px #00ffff'
-          : '0 0 20px rgba(255,255,255,0.5)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'scale(1)'
-        e.currentTarget.style.boxShadow = 'none'
+        letterSpacing: '4px',
+        textTransform: 'uppercase',
+        transition: 'all 0.15s ease',
+        minWidth: '220px',
+        fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
       }}
     >
-      {children}
+      {label}
     </button>
   )
 }
 
 /**
- * Controls Modal Component
- * แสดงวิธีเล่นเกม (Controller Instructions)
- * ใช้ Background เดียวกับหน้า Menu
+ * Settings Modal Component - Stray Style
+ * แสดง Settings/Controls แบบ minimalist
  */
-function ControlsModal({ onClose }: { onClose: () => void }) {
+function SettingsModal({ onClose }: { onClose: () => void }) {
+  /**
+   * Handle close พร้อมเล่นเสียง click
+   */
+  const handleClose = () => {
+    playClickSound()
+    onClose()
+  }
+
   const controls = [
-    { key: 'W / ↑', action: 'Move Forward' },
-    { key: 'S / ↓', action: 'Move Backward' },
-    { key: 'A / ←', action: 'Move Left' },
-    { key: 'D / →', action: 'Move Right' },
+    { key: 'W', action: 'Move Forward' },
+    { key: 'S', action: 'Move Backward / U-Turn' },
+    { key: 'A', action: 'Turn Left' },
+    { key: 'D', action: 'Turn Right' },
     { key: 'SPACE', action: 'Jump' },
-    { key: 'Mouse', action: 'Rotate Camera' },
+    { key: 'Mouse Drag', action: 'Rotate Camera' },
     { key: 'Scroll', action: 'Zoom In/Out' },
   ]
 
@@ -181,143 +216,105 @@ function ControlsModal({ onClose }: { onClose: () => void }) {
         left: 0,
         width: '100%',
         height: '100%',
+        background: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(3px)',
         zIndex: 3000,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
-      onClick={onClose}
+      onClick={handleClose}
     >
-      {/* Background Image - Same as Menu */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundImage: 'url("/menu-bg.jpg")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        filter: 'brightness(0.9) saturate(1.3) blur(2px)',
-      }} />
-
-      {/* Gradient Overlay */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'linear-gradient(135deg, rgba(255,0,128,0.2) 0%, rgba(0,0,0,0.6) 50%, rgba(0,255,255,0.2) 100%)',
-      }} />
-
-      {/* Scanlines Effect */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 2px)',
-        pointerEvents: 'none',
-      }} />
-
-      {/* Content */}
+      {/* Modal Content */}
       <div
         style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
+          background: 'rgba(20,25,20,0.95)',
+          padding: '50px 80px',
+          borderRadius: '4px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          minWidth: '400px',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          style={{
-            background: 'rgba(10, 10, 20, 0.85)',
-            padding: '40px 60px',
-            borderRadius: '16px',
-            border: '2px solid #00ffff',
-            boxShadow: '0 0 40px rgba(0,255,255,0.3), 0 0 80px rgba(0,255,255,0.1)',
-            backdropFilter: 'blur(10px)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h2 style={{
-            color: '#00ffff',
-            fontSize: '32px',
-            marginBottom: '30px',
-            textAlign: 'center',
-            textShadow: '0 0 10px #00ffff, 0 0 20px #00ffff',
-          }}>
-            🎮 CONTROLS
-          </h2>
+        {/* Title */}
+        <h2 style={{
+          color: 'rgba(255,255,255,0.9)',
+          fontSize: '20px',
+          fontWeight: 500,
+          marginBottom: '40px',
+          textAlign: 'center',
+          letterSpacing: '8px',
+          textTransform: 'uppercase',
+        }}>
+          Controls
+        </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {controls.map((control, index) => (
-              <div
-                key={index}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '40px',
-                }}
-              >
-                <span style={{
-                  color: '#ff0080',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  fontFamily: 'monospace',
-                  background: 'rgba(255,0,128,0.15)',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: '1px solid #ff0080',
-                  minWidth: '100px',
-                  textAlign: 'center',
-                  boxShadow: '0 0 10px rgba(255,0,128,0.2)',
-                }}>
-                  {control.key}
-                </span>
-                <span style={{
-                  color: '#fff',
-                  fontSize: '16px',
-                  textShadow: '0 0 5px rgba(255,255,255,0.3)',
-                }}>
-                  {control.action}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={onClose}
-            style={{
-              marginTop: '30px',
-              width: '100%',
-              padding: '14px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              color: '#fff',
-              background: 'linear-gradient(90deg, rgba(0,255,255,0.2), rgba(255,0,128,0.2))',
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              letterSpacing: '2px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(90deg, rgba(0,255,255,0.4), rgba(255,0,128,0.4))'
-              e.currentTarget.style.borderColor = '#00ffff'
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(0,255,255,0.3)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(90deg, rgba(0,255,255,0.2), rgba(255,0,128,0.2))'
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-          >
-            CLOSE
-          </button>
+        {/* Control List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {controls.map((control, index) => (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                paddingBottom: '15px',
+              }}
+            >
+              <span style={{
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '14px',
+                letterSpacing: '1px',
+              }}>
+                {control.action}
+              </span>
+              <span style={{
+                color: 'rgba(255,255,255,0.8)',
+                fontSize: '13px',
+                fontWeight: 500,
+                fontFamily: 'monospace',
+                background: 'rgba(255,255,255,0.1)',
+                padding: '6px 14px',
+                borderRadius: '3px',
+                letterSpacing: '1px',
+              }}>
+                {control.key}
+              </span>
+            </div>
+          ))}
         </div>
+
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          style={{
+            marginTop: '40px',
+            width: '100%',
+            padding: '14px',
+            fontSize: '14px',
+            fontWeight: 500,
+            color: 'rgba(255,255,255,0.7)',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '3px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            letterSpacing: '4px',
+            textTransform: 'uppercase',
+          }}
+          onMouseEnter={(e) => {
+            playHoverSound()
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+          }}
+        >
+          Back
+        </button>
       </div>
     </div>
   )

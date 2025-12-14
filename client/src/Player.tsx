@@ -154,7 +154,8 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     const velocity = body.current.linvel()
 
     // 1. Rotate character with A/D keys (ปรับตาม rotationSpeed จาก Settings)
-    const baseRotationSpeed = 1.5
+    // Base speed ปรับให้ 1x รู้สึกเหมาะสม
+    const baseRotationSpeed = 2.25
     const rotationSpeed = baseRotationSpeed * characterSettings.rotationSpeed * delta
     if (left) {
       characterRotation.current += rotationSpeed
@@ -164,9 +165,9 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     }
 
     // 2. Movement based on character facing direction (ปรับตาม moveSpeed จาก Settings)
-    // เพิ่ม impulse strength ชดเชย damping ที่สูงขึ้น
+    // Base speed ปรับให้ 1x รู้สึกเหมาะสม
     const impulse = { x: 0, y: 0, z: 0 }
-    const baseImpulseStrength = 0.25
+    const baseImpulseStrength = 0.625
     const impulseStrength = baseImpulseStrength * characterSettings.moveSpeed * delta * 60
 
     // Forward/backward direction based on character rotation
@@ -260,7 +261,8 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
     }
 
     // Limit max speed (ปรับตาม moveSpeed จาก Settings)
-    const baseMaxSpeed = 5
+    // Base speed ปรับให้ 1x รู้สึกเหมาะสม
+    const baseMaxSpeed = 12.5
     const maxSpeed = baseMaxSpeed * characterSettings.moveSpeed
     const currentVelX = velocity.x
     const currentVelZ = velocity.z

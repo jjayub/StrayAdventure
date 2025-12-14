@@ -49,7 +49,7 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
       }}>
         {/* Connection Status */}
         <div style={{
-          color: isConnected ? '#0f0' : '#f00',
+          color: isConnected ? '#0f0' : '#00c8ff',
           fontFamily: 'monospace',
           fontSize: '14px',
           textShadow: '0 0 5px #000',
@@ -58,7 +58,7 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
           borderRadius: '6px',
           pointerEvents: 'auto',
         }}>
-          {isConnected ? `🟢 Connected (${latency}ms)` : '🔴 Disconnected'}
+          {isConnected ? `🟢 Online (${latency}ms)` : '🎮 Single Player Mode'}
         </div>
 
         {/* Right Side Buttons */}

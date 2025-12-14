@@ -22,31 +22,41 @@ export function MapSelection() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMap, setShowAddMap] = useState(false)
+  const [isServerAvailable, setIsServerAvailable] = useState(false)
 
-  // โหลดรายการ Maps จาก Server (ใช้ useCallback เพื่อ reuse)
+  // โหลดรายการ Maps - ใช้ static file เป็นหลักสำหรับ offline mode
   const loadMaps = useCallback(async () => {
     setIsLoading(true)
+
+    // ลองโหลดจาก server ก่อน (ถ้ามี)
+    const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'
+
     try {
-      const response = await fetch('http://localhost:3000/api/maps')
+      const response = await fetch(`${serverUrl}/api/maps`, {
+        signal: AbortSignal.timeout(3000) // timeout 3 วินาที
+      })
       if (response.ok) {
         const data = await response.json()
         setAvailableMaps(data.maps || [])
-      } else {
-        // Fallback to static file
-        const staticResponse = await fetch('/maps/maps.json')
-        const data = await staticResponse.json()
-        setAvailableMaps(data.maps || [])
+        setIsServerAvailable(true)
+        setIsLoading(false)
+        return
       }
     } catch {
-      // Fallback to static file
-      try {
-        const staticResponse = await fetch('/maps/maps.json')
-        const data = await staticResponse.json()
-        setAvailableMaps(data.maps || [])
-      } catch (error) {
-        console.error('Failed to load maps:', error)
-      }
+      // Server ไม่พร้อม - ใช้ static file แทน
+      setIsServerAvailable(false)
     }
+
+    // Fallback: โหลดจาก static file (สำหรับ offline/static hosting)
+    try {
+      const staticResponse = await fetch('/maps/maps.json')
+      const data = await staticResponse.json()
+      setAvailableMaps(data.maps || [])
+    } catch (error) {
+      console.error('Failed to load maps:', error)
+      setAvailableMaps([])
+    }
+
     setIsLoading(false)
   }, [setAvailableMaps])
 
@@ -150,8 +160,8 @@ export function MapSelection() {
                   onClick={() => handleSelectMap(map, index)}
                 />
               ))}
-              {/* Add Map Card */}
-              <AddMapCard onClick={() => setShowAddMap(true)} />
+              {/* Add Map Card - แสดงเฉพาะเมื่อ server พร้อมใช้งาน */}
+              {isServerAvailable && <AddMapCard onClick={() => setShowAddMap(true)} />}
             </>
           )}
         </div>

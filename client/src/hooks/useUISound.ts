@@ -60,6 +60,67 @@ export const playHoverSound = (volume: number = 0.15): void => {
 }
 
 /**
+ * เล่นเสียง hover สำหรับ Map Card แบบ synthesized
+ * เสียง low swoosh/whoosh ที่แตกต่างจาก menu button
+ * @param volume - ระดับเสียง (0.0 - 1.0), default 0.12
+ */
+export const playMapHoverSound = (volume: number = 0.12): void => {
+  try {
+    const ctx = getAudioContext()
+
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+
+    const currentTime = ctx.currentTime
+
+    // Low frequency sweep - เสียง whoosh ต่ำ
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(200, currentTime)
+    osc.frequency.exponentialRampToValueAtTime(350, currentTime + 0.08)
+    osc.frequency.exponentialRampToValueAtTime(250, currentTime + 0.15)
+
+    // เพิ่ม subtle noise layer
+    const osc2 = ctx.createOscillator()
+    osc2.type = 'triangle'
+    osc2.frequency.setValueAtTime(150, currentTime)
+    osc2.frequency.exponentialRampToValueAtTime(200, currentTime + 0.1)
+
+    // Gain envelope - นุ่มนวลกว่า menu hover
+    const gainNode = ctx.createGain()
+    gainNode.gain.setValueAtTime(0, currentTime)
+    gainNode.gain.linearRampToValueAtTime(volume, currentTime + 0.02)
+    gainNode.gain.linearRampToValueAtTime(volume * 0.6, currentTime + 0.08)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.18)
+
+    const gain2 = ctx.createGain()
+    gain2.gain.setValueAtTime(0, currentTime)
+    gain2.gain.linearRampToValueAtTime(volume * 0.3, currentTime + 0.015)
+    gain2.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.12)
+
+    // Low-pass filter เพื่อให้เสียงนุ่มขึ้น
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 600
+
+    // Connect
+    osc.connect(filter)
+    osc2.connect(filter)
+    filter.connect(gainNode)
+    gainNode.connect(ctx.destination)
+
+    // Play
+    osc.start(currentTime)
+    osc2.start(currentTime)
+    osc.stop(currentTime + 0.2)
+    osc2.stop(currentTime + 0.15)
+  } catch (error) {
+    console.warn('Could not play map hover sound:', error)
+  }
+}
+
+/**
  * เล่นเสียง click/select แบบ synthesized
  * เสียงที่หนักกว่า hover สำหรับ confirm action
  * @param volume - ระดับเสียง (0.0 - 1.0), default 0.2
@@ -145,14 +206,186 @@ export const playSound = async (url: string, volume: number = 0.3): Promise<void
 }
 
 /**
+ * เล่นเสียงกระโดด แบบ synthesized
+ * เสียง "whoosh" ขึ้นสูง
+ * @param volume - ระดับเสียง (0.0 - 1.0), default 0.25
+ */
+export const playJumpSound = (volume: number = 0.25): void => {
+  try {
+    const ctx = getAudioContext()
+
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+
+    const currentTime = ctx.currentTime
+
+    // Oscillator - เสียง whoosh ขึ้นสูง
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(150, currentTime)
+    osc.frequency.exponentialRampToValueAtTime(400, currentTime + 0.1)
+    osc.frequency.exponentialRampToValueAtTime(200, currentTime + 0.2)
+
+    // Noise-like effect with second oscillator
+    const osc2 = ctx.createOscillator()
+    osc2.type = 'triangle'
+    osc2.frequency.setValueAtTime(100, currentTime)
+    osc2.frequency.exponentialRampToValueAtTime(300, currentTime + 0.15)
+
+    // Gain envelope
+    const gainNode = ctx.createGain()
+    gainNode.gain.setValueAtTime(volume, currentTime)
+    gainNode.gain.linearRampToValueAtTime(volume * 0.8, currentTime + 0.05)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.25)
+
+    const gain2 = ctx.createGain()
+    gain2.gain.setValueAtTime(volume * 0.3, currentTime)
+    gain2.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.2)
+
+    // Connect
+    osc.connect(gainNode)
+    osc2.connect(gain2)
+    gainNode.connect(ctx.destination)
+    gain2.connect(ctx.destination)
+
+    // Play
+    osc.start(currentTime)
+    osc2.start(currentTime)
+    osc.stop(currentTime + 0.3)
+    osc2.stop(currentTime + 0.25)
+  } catch (error) {
+    console.warn('Could not play jump sound:', error)
+  }
+}
+
+/**
+ * เล่นเสียงฝีเท้าวิ่ง/เดิน แบบ synthesized
+ * เสียง soft thump สำหรับ footstep
+ * @param volume - ระดับเสียง (0.0 - 1.0), default 0.15
+ * @param isRunning - กำลังวิ่งหรือไม่ (เสียงจะต่างกัน)
+ */
+export const playFootstepSound = (volume: number = 0.15, isRunning: boolean = false): void => {
+  try {
+    const ctx = getAudioContext()
+
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+
+    const currentTime = ctx.currentTime
+
+    // สร้างเสียง thump ด้วย noise-like oscillator
+    const osc = ctx.createOscillator()
+    osc.type = 'triangle'
+
+    // วิ่ง = เสียงสูงกว่าและสั้นกว่า
+    const baseFreq = isRunning ? 80 : 60
+    const duration = isRunning ? 0.06 : 0.08
+
+    osc.frequency.setValueAtTime(baseFreq, currentTime)
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, currentTime + duration)
+
+    // เพิ่ม variation เล็กน้อยให้เสียงไม่ซ้ำเกินไป
+    const pitchVariation = 0.9 + Math.random() * 0.2
+    osc.frequency.value *= pitchVariation
+
+    // Gain - attack เร็ว, decay เร็ว
+    const gainNode = ctx.createGain()
+    const adjustedVolume = volume * (isRunning ? 1.2 : 1)
+    gainNode.gain.setValueAtTime(0, currentTime)
+    gainNode.gain.linearRampToValueAtTime(adjustedVolume, currentTime + 0.005)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + duration + 0.02)
+
+    // Low-pass filter เพื่อให้เสียงนุ่มขึ้น
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = isRunning ? 400 : 300
+
+    // Connect
+    osc.connect(filter)
+    filter.connect(gainNode)
+    gainNode.connect(ctx.destination)
+
+    // Play
+    osc.start(currentTime)
+    osc.stop(currentTime + duration + 0.05)
+  } catch (error) {
+    console.warn('Could not play footstep sound:', error)
+  }
+}
+
+/**
+ * เล่นเสียงลงพื้น (landing) แบบ synthesized
+ * เสียง thump หนักกว่า footstep
+ * @param volume - ระดับเสียง (0.0 - 1.0), default 0.3
+ */
+export const playLandingSound = (volume: number = 0.3): void => {
+  try {
+    const ctx = getAudioContext()
+
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+
+    const currentTime = ctx.currentTime
+
+    // Low thump
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(100, currentTime)
+    osc.frequency.exponentialRampToValueAtTime(40, currentTime + 0.1)
+
+    // Impact noise
+    const osc2 = ctx.createOscillator()
+    osc2.type = 'triangle'
+    osc2.frequency.setValueAtTime(200, currentTime)
+    osc2.frequency.exponentialRampToValueAtTime(50, currentTime + 0.08)
+
+    // Gains
+    const gain1 = ctx.createGain()
+    gain1.gain.setValueAtTime(volume, currentTime)
+    gain1.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.15)
+
+    const gain2 = ctx.createGain()
+    gain2.gain.setValueAtTime(volume * 0.5, currentTime)
+    gain2.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.1)
+
+    // Filter
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 250
+
+    // Connect
+    osc.connect(filter)
+    filter.connect(gain1)
+    osc2.connect(gain2)
+    gain1.connect(ctx.destination)
+    gain2.connect(ctx.destination)
+
+    // Play
+    osc.start(currentTime)
+    osc2.start(currentTime)
+    osc.stop(currentTime + 0.2)
+    osc2.stop(currentTime + 0.15)
+  } catch (error) {
+    console.warn('Could not play landing sound:', error)
+  }
+}
+
+/**
  * Custom hook สำหรับ UI sounds
  * @returns Object containing sound functions
  */
 export const useUISound = () => {
   return {
     playHoverSound,
+    playMapHoverSound,
     playClickSound,
     playSound,
+    playJumpSound,
+    playFootstepSound,
+    playLandingSound,
   }
 }
 

@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { useSocket } from './stores/useSocket'
 import { useGame } from './stores/useGame'
+import { playJumpSound, playFootstepSound, playLandingSound } from './hooks/useUISound'
 
 /**
  * Player Props Interface - กำหนด props ที่ Player component รับได้
@@ -31,6 +32,11 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
   const lastSyncTime = useRef(0)
   const [, getKeys] = useKeyboardControls()
   const { camera, gl, scene: threeScene } = useThree()
+
+  // Sound timing refs - ติดตามเวลาสำหรับเล่นเสียง
+  const lastFootstepTime = useRef(0)
+  const wasInAir = useRef(false) // ติดตามว่าอยู่กลางอากาศหรือไม่ (สำหรับ landing sound)
+  const wasJumpPressed = useRef(false) // ติดตามว่ากด jump อยู่หรือไม่ (สำหรับ edge detection)
 
   // Character rotation (the direction character is facing)
   const characterRotation = useRef(0) // radians
@@ -291,12 +297,31 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
       canJump.current = true
     }
 
-    // กระโดดได้เฉพาะเมื่อ canJump เป็น true (ยืนบนพื้น) - ปรับตาม jumpForce จาก Settings
-    if (jump && canJump.current && isOnGround) {
+    // กระโดดได้เฉพาะเมื่อ:
+    // 1. กดปุ่ม jump ครั้งแรก (edge detection - ไม่ใช่กดค้าง)
+    // 2. canJump เป็น true
+    // 3. ยืนบนพื้น
+    // ปรับตาม jumpForce จาก Settings
+    const jumpJustPressed = jump && !wasJumpPressed.current // ตรวจจับการกดครั้งแรก
+
+    if (jumpJustPressed && canJump.current && isOnGround) {
       const baseJumpVelocity = 10
       const jumpVelocity = baseJumpVelocity * characterSettings.jumpForce
       body.current.setLinvel({ x: velocity.x, y: jumpVelocity, z: velocity.z }, true)
       canJump.current = false // ป้องกันกระโดดซ้ำ
+      wasInAir.current = true // ติดตามว่ากระโดดแล้ว
+      playJumpSound() // เล่นเสียงกระโดด
+    }
+
+    // อัปเดตสถานะการกด jump สำหรับ frame ถัดไป
+    wasJumpPressed.current = jump
+
+    // Landing sound - เล่นเสียงเมื่อลงพื้นหลังจากกระโดด
+    if (isOnGround && wasInAir.current) {
+      playLandingSound()
+      wasInAir.current = false
+    } else if (!isOnGround) {
+      wasInAir.current = true
     }
 
     // 4. Animation State Logic
@@ -308,6 +333,21 @@ export function Player({ spawnPoint = [0, 1, 0] }: PlayerProps) {
 
     if (currentAction !== nextAction) {
       setCurrentAction(nextAction)
+    }
+
+    // 4.5 Footstep sounds - เล่นเสียงฝีเท้าเมื่อเดิน/วิ่งบนพื้น
+    const currentTimeMs = Date.now()
+    const isRunning = speed > 2
+    const isWalking = speed > 0.5
+
+    if (isOnGround && (isWalking || isRunning)) {
+      // กำหนดระยะเวลาระหว่างเสียงฝีเท้า (วิ่งเร็วกว่า = ถี่กว่า)
+      const footstepInterval = isRunning ? 250 : 400 // ms
+
+      if (currentTimeMs - lastFootstepTime.current > footstepInterval) {
+        playFootstepSound(0.12, isRunning)
+        lastFootstepTime.current = currentTimeMs
+      }
     }
 
     // 5. Update model rotation - หันหน้าออกจากกล้อง (ไปข้างหน้า)

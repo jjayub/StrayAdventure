@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useGame } from './stores/useGame'
+import { playHoverSound, playMapHoverSound, playClickSound } from './hooks/useUISound'
 
 // Define MapInfo type locally
 interface MapInfo {
@@ -23,6 +24,20 @@ export function MapSelection() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddMap, setShowAddMap] = useState(false)
   const [isServerAvailable, setIsServerAvailable] = useState(false)
+  const [hoveredButton, setHoveredButton] = useState<string | null>('play')
+
+  /**
+   * Handle button hover พร้อมเล่นเสียง
+   * เล่นเสียงเฉพาะเมื่อเปลี่ยนปุ่มที่ hover
+   */
+  const handleButtonHover = useCallback((buttonId: string) => {
+    setHoveredButton((prev) => {
+      if (prev !== buttonId) {
+        playHoverSound()
+      }
+      return buttonId
+    })
+  }, [])
 
   // โหลดรายการ Maps - ใช้ static file เป็นหลักสำหรับ offline mode
   const loadMaps = useCallback(async () => {
@@ -166,69 +181,31 @@ export function MapSelection() {
           )}
         </div>
 
-        {/* Bottom Buttons */}
+        {/* Bottom Buttons - Stray Style */}
         <div style={{
           display: 'flex',
-          gap: '20px',
+          flexDirection: 'column',
+          gap: '8px',
+          alignItems: 'center',
           marginTop: '30px',
         }}>
-          <button
-            onClick={goToMenu}
-            style={{
-              padding: '15px 40px',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              fontFamily: "'Rajdhani', sans-serif",
-              color: '#fff',
-              background: 'rgba(255,255,255,0.1)',
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              letterSpacing: '2px',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#fff'
-              e.currentTarget.style.background = 'rgba(255,255,255,0.2)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-            }}
-          >
-            ← BACK
-          </button>
-
-          <button
-            onClick={handleStartGame}
-            disabled={availableMaps.length === 0}
-            style={{
-              padding: '15px 50px',
-              fontSize: '20px',
-              fontWeight: 'bold',
-              fontFamily: "'Rajdhani', sans-serif",
-              color: '#000',
-              background: 'linear-gradient(90deg, #00ffff, #00ff88)',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: availableMaps.length > 0 ? 'pointer' : 'not-allowed',
-              letterSpacing: '3px',
-              transition: 'all 0.3s ease',
-              opacity: availableMaps.length > 0 ? 1 : 0.5,
-            }}
-            onMouseEnter={(e) => {
+          <StrayMapButton
+            label="PLAY"
+            isHovered={hoveredButton === 'play'}
+            onHover={() => handleButtonHover('play')}
+            onClick={() => {
               if (availableMaps.length > 0) {
-                e.currentTarget.style.transform = 'scale(1.05)'
-                e.currentTarget.style.boxShadow = '0 0 30px #00ffff'
+                handleStartGame()
               }
             }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-          >
-            ▶ PLAY
-          </button>
+            disabled={availableMaps.length === 0}
+          />
+          <StrayMapButton
+            label="BACK"
+            isHovered={hoveredButton === 'back'}
+            onHover={() => handleButtonHover('back')}
+            onClick={goToMenu}
+          />
         </div>
       </div>
 
@@ -247,12 +224,15 @@ export function MapSelection() {
 }
 
 /**
- * Add Map Card - ปุ่มเพิ่ม Map ใหม่
+ * Add Map Card - ปุ่มเพิ่ม Map ใหม่ พร้อม sound effects
  */
 function AddMapCard({ onClick }: { onClick: () => void }) {
   return (
     <div
-      onClick={onClick}
+      onClick={() => {
+        playClickSound()
+        onClick()
+      }}
       style={{
         width: '320px',
         height: '240px',
@@ -269,6 +249,7 @@ function AddMapCard({ onClick }: { onClick: () => void }) {
         transition: 'all 0.3s ease',
       }}
       onMouseEnter={(e) => {
+        playMapHoverSound()
         e.currentTarget.style.borderColor = '#00ffff'
         e.currentTarget.style.background = 'rgba(0,255,255,0.15)'
         e.currentTarget.style.transform = 'scale(1.02)'
@@ -536,7 +517,11 @@ function AddMapModal({
           {/* Buttons */}
           <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
             <button
-              onClick={onClose}
+              onClick={() => {
+                playClickSound()
+                onClose()
+              }}
+              onMouseEnter={() => playHoverSound()}
               style={{
                 flex: 1,
                 padding: '14px',
@@ -552,7 +537,15 @@ function AddMapModal({
               CANCEL
             </button>
             <button
-              onClick={handleUpload}
+              onClick={() => {
+                if (!isUploading) {
+                  playClickSound()
+                  handleUpload()
+                }
+              }}
+              onMouseEnter={() => {
+                if (!isUploading) playHoverSound()
+              }}
               disabled={isUploading}
               style={{
                 flex: 1,
@@ -578,7 +571,7 @@ function AddMapModal({
 
 /**
  * MapCard Component
- * การ์ดแสดง Preview ของ Map
+ * การ์ดแสดง Preview ของ Map พร้อม sound effects
  */
 function MapCard({
   map,
@@ -593,7 +586,10 @@ function MapCard({
 
   return (
     <div
-      onClick={onClick}
+      onClick={() => {
+        playClickSound()
+        onClick()
+      }}
       style={{
         width: '320px',
         height: '240px',
@@ -609,6 +605,7 @@ function MapCard({
         transform: isSelected ? 'scale(1.05)' : 'scale(1)',
       }}
       onMouseEnter={(e) => {
+        playMapHoverSound()
         if (!isSelected) {
           e.currentTarget.style.transform = 'scale(1.02)'
           e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.7)'
@@ -703,5 +700,63 @@ function MapCard({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Stray-Style Map Selection Button
+ * ปุ่มแบบ minimalist เหมือน MainMenu
+ */
+function StrayMapButton({
+  label,
+  isHovered,
+  onHover,
+  onClick,
+  disabled = false,
+}: {
+  label: string
+  isHovered: boolean
+  onHover: () => void
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      onClick={() => {
+        if (!disabled) {
+          playClickSound()
+          onClick()
+        }
+      }}
+      onMouseEnter={onHover}
+      onFocus={onHover}
+      disabled={disabled}
+      style={{
+        padding: '12px 40px',
+        fontSize: '16px',
+        fontWeight: 500,
+        color: disabled
+          ? 'rgba(255,255,255,0.3)'
+          : isHovered
+            ? '#000'
+            : 'rgba(255,255,255,0.7)',
+        background: disabled
+          ? 'transparent'
+          : isHovered
+            ? 'rgba(255,255,255,0.95)'
+            : 'transparent',
+        border: 'none',
+        borderRadius: '2px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        letterSpacing: '4px',
+        textTransform: 'uppercase',
+        transition: 'all 0.15s ease',
+        minWidth: '220px',
+        fontFamily: "'Segoe UI', 'Helvetica Neue', sans-serif",
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      {label}
+    </button>
   )
 }

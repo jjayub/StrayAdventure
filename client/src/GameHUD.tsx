@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useGame } from './stores/useGame'
+import { playHoverSound, playClickSound } from './hooks/useUISound'
 
 /**
  * GameHUD Component - Stray Style
@@ -61,7 +62,10 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
         <div style={{ display: 'flex', gap: '15px', pointerEvents: 'auto' }}>
           {/* Settings Button */}
           <button
-            onClick={toggleSettings}
+            onClick={() => {
+              playClickSound()
+              toggleSettings()
+            }}
             style={{
               padding: '8px 20px',
               fontSize: '12px',
@@ -77,6 +81,7 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
               backdropFilter: 'blur(5px)',
             }}
             onMouseEnter={(e) => {
+              playHoverSound()
               if (!showSettings) {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'
@@ -94,7 +99,10 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
 
           {/* Exit Button */}
           <button
-            onClick={handleExit}
+            onClick={() => {
+              playClickSound()
+              handleExit()
+            }}
             style={{
               padding: '8px 20px',
               fontSize: '12px',
@@ -110,6 +118,7 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
               backdropFilter: 'blur(5px)',
             }}
             onMouseEnter={(e) => {
+              playHoverSound()
               e.currentTarget.style.background = 'rgba(255,100,100,0.3)'
               e.currentTarget.style.borderColor = 'rgba(255,100,100,0.5)'
             }}
@@ -158,7 +167,11 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
               Settings
             </h3>
             <button
-              onClick={toggleSettings}
+              onClick={() => {
+                playClickSound()
+                toggleSettings()
+              }}
+              onMouseEnter={() => playHoverSound()}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -222,7 +235,10 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
 
           {/* Reset Button */}
           <button
-            onClick={() => updateCharacterSettings({ moveSpeed: 1, rotationSpeed: 1, jumpForce: 1, renderDistance: 500 })}
+            onClick={() => {
+              playClickSound()
+              updateCharacterSettings({ moveSpeed: 1, rotationSpeed: 1, jumpForce: 1, renderDistance: 500 })
+            }}
             style={{
               width: '100%',
               padding: '12px',
@@ -239,6 +255,7 @@ export function GameHUD({ isConnected, latency }: GameHUDProps) {
               marginTop: '10px',
             }}
             onMouseEnter={(e) => {
+              playHoverSound()
               e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
             }}
@@ -379,7 +396,7 @@ function SettingsSlider({
 
 /**
  * Stray-Style Button
- * ปุ่มแบบ minimalist
+ * ปุ่มแบบ minimalist พร้อม sound effects
  */
 function StrayButton({
   children,
@@ -392,7 +409,10 @@ function StrayButton({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        playClickSound()
+        onClick()
+      }}
       style={{
         padding: '12px 35px',
         fontSize: '13px',
@@ -408,6 +428,7 @@ function StrayButton({
         minWidth: '100px',
       }}
       onMouseEnter={(e) => {
+        playHoverSound()
         if (!primary) {
           e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
           e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'

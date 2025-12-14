@@ -113,13 +113,14 @@ export function MainMenu() {
             onHover={() => handleHover('credits')}
             onClick={() => handleClick(() => { })}
           />
-          {/* Quit button hidden for web version - uncomment for desktop app */}
-          {/* <StrayMenuButton
+          <StrayMenuButton
             label="QUIT"
             isHovered={hoveredButton === 'quit'}
             onHover={() => handleHover('quit')}
-            onClick={() => handleClick(() => {})}
-          /> */}
+            onClick={() => handleClick(() => {
+              window.location.href = 'https://hr.dkcmain.org:9000/'
+            })}
+          />
         </div>
 
         {/* Version Info - Bottom Left */}

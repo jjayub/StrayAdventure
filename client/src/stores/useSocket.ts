@@ -70,7 +70,13 @@ export const useSocket = create<SocketState>((set, get) => ({
    * ถ้าไม่มี server จะทำงานแบบ offline (Single Player Mode)
    */
   connect: () => {
-    const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'
+    // In production (on Render), use the same origin as the page
+    // In development, use localhost:3000
+    const isProduction = import.meta.env.PROD
+    const serverUrl = import.meta.env.VITE_SERVER_URL ||
+      (isProduction ? window.location.origin : 'http://localhost:3000')
+
+    console.log('🔌 Connecting to server:', serverUrl, isProduction ? '(production)' : '(development)')
 
     // ถ้าไม่มี server URL หรือเป็น offline mode ให้ข้ามการเชื่อมต่อ
     if (import.meta.env.VITE_OFFLINE_MODE === 'true') {

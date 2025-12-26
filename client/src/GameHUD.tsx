@@ -450,38 +450,3 @@ function StrayButton({
   )
 }
 
-/**
- * Controller Hint Component
- * แสดง Controller Button + Action
- */
-function ControllerHint({ button, action }: { button: string; action: string }) {
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-    }}>
-      <div style={{
-        width: '24px',
-        height: '24px',
-        borderRadius: '50%',
-        border: '1.5px solid rgba(255,255,255,0.4)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        fontSize: '11px',
-        fontWeight: 500,
-        color: 'rgba(255,255,255,0.6)',
-      }}>
-        {button}
-      </div>
-      <span style={{
-        color: 'rgba(255,255,255,0.4)',
-        fontSize: '12px',
-        letterSpacing: '1px',
-      }}>
-        {action}
-      </span>
-    </div>
-  )
-}

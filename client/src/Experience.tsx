@@ -204,8 +204,8 @@ export function Experience() {
       />
 
       {/* Clouds */}
-      <Cloud position={[-20, 15, -30]} speed={0.2} opacity={0.6} depth={1.5} width={20} segments={20} />
-      <Cloud position={[20, 12, -25]} speed={0.3} opacity={0.5} depth={1} width={15} segments={15} />
+      <Cloud position={[-20, 15, -30]} speed={0.2} opacity={0.6} />
+      <Cloud position={[20, 12, -25]} speed={0.3} opacity={0.5} />
 
       {/* Camera is now controlled by Player component (Third-Person) */}
 

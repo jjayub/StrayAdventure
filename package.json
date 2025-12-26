@@ -1,0 +1,21 @@
+{
+    "name": "stray-game",
+    "version": "1.0.0",
+    "description": "Multiplayer 3D Browser Game",
+    "private": true,
+    "scripts": {
+        "install:all": "npm install --prefix client --legacy-peer-deps && npm install --prefix server",
+        "build:client": "npm run build --prefix client",
+        "build:server": "npm run build --prefix server",
+        "build": "npm run build:client && npm run build:server",
+        "start": "npm run start --prefix server",
+        "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+        "postinstall": "npm run install:all"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}

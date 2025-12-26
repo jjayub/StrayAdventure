@@ -12,15 +12,19 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files from client build (for production)
-const CLIENT_DIST = path.join(__dirname, '../../client/dist');
-const CLIENT_PUBLIC = path.join(__dirname, '../../client/public');
+// __dirname points to server/dist, so we go up two levels to get project root
+// This works for both local development and Railway deployment
+const SERVER_DIST_DIR = __dirname; // server/dist when compiled
+const PROJECT_ROOT = path.resolve(SERVER_DIST_DIR, '../..'); // Go up from server/dist to project root
+const CLIENT_DIST = path.join(PROJECT_ROOT, 'client/dist');
+const CLIENT_PUBLIC = path.join(PROJECT_ROOT, 'client/public');
 
 // Serve client static files
 app.use(express.static(CLIENT_DIST));
 app.use(express.static(CLIENT_PUBLIC));
 
 // Static files for maps
-const MAPS_DIR = path.join(__dirname, '../../client/public/maps');
+const MAPS_DIR = path.join(PROJECT_ROOT, 'client/public/maps');
 
 // Ensure maps directory exists
 if (!fs.existsSync(MAPS_DIR)) {
@@ -41,7 +45,7 @@ const io = new Server(httpServer, {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
 /**
  * Interface สำหรับข้อมูล Map
